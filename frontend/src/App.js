@@ -1,53 +1,92 @@
-import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+import { Toaster } from "@/components/ui/sonner";
+import HomePage from "@/pages/HomePage";
+import PackagesPage from "@/pages/PackagesPage";
+import ServicesPage from "@/pages/ServicesPage";
+import CalculatorPage from "@/pages/CalculatorPage";
+import ContactPage from "@/pages/ContactPage";
+import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminLeads from "@/pages/admin/AdminLeads";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import AdminLayout from "@/components/AdminLayout";
+import { AuthProvider } from "@/context/AuthContext";
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
+    <AuthProvider>
+      <div className="App">
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route
+              path="/"
+              element={
+                <>
+                  <Navbar />
+                  <HomePage />
+                  <Footer />
+                </>
+              }
+            />
+            <Route
+              path="/packages"
+              element={
+                <>
+                  <Navbar />
+                  <PackagesPage />
+                  <Footer />
+                </>
+              }
+            />
+            <Route
+              path="/services"
+              element={
+                <>
+                  <Navbar />
+                  <ServicesPage />
+                  <Footer />
+                </>
+              }
+            />
+            <Route
+              path="/calculator"
+              element={
+                <>
+                  <Navbar />
+                  <CalculatorPage />
+                  <Footer />
+                </>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <>
+                  <Navbar />
+                  <ContactPage />
+                  <Footer />
+                </>
+              }
+            />
+            
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
+              path="/admin"
+              element={<AdminLayout />}
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="leads" element={<AdminLeads />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+        <Toaster position="top-right" richColors />
+      </div>
+    </AuthProvider>
   );
 }
 
