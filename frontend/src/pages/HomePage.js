@@ -277,44 +277,130 @@ const HomePage = () => {
       </section>
 
       {/* Process Section */}
-      <section className="py-20 bg-white" data-testid="process-section">
+      <section className="py-24 bg-gradient-to-b from-white to-slate-50" data-testid="process-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-[#010822] mb-6">
-                Our Proven 5-Step Process
-              </h2>
-              <p className="text-slate-600 mb-10">
-                From initial consultation to final handover, we ensure complete 
-                transparency at every step. No surprises, just quality delivery.
-              </p>
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-[#2a4599]/10 px-4 py-2 rounded-full mb-4">
+              <Clock size={16} className="text-[#2a4599]" />
+              <span className="text-sm font-semibold text-[#2a4599]">Your Journey to Dream Home</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-bold text-[#010822] mb-4">
+              Our 5-Step <span className="text-[#2a4599]">Transparent</span> Process
+            </h2>
+            <p className="text-slate-600 max-w-2xl mx-auto text-lg">
+              From first meeting to key handover - complete visibility at every stage. 
+              No surprises, just quality delivery.
+            </p>
+          </div>
 
-              <div className="space-y-6">
-                {processSteps.map((step, idx) => (
-                  <div key={step.step} className="flex gap-4 items-start">
-                    <div className="w-12 h-12 bg-[#2a4599] text-white rounded-sm flex items-center justify-center font-bold flex-shrink-0">
+          {/* Process Timeline - Desktop */}
+          <div className="hidden lg:block relative">
+            {/* Connection Line */}
+            <div className="absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-[#2a4599] via-[#F97316] to-[#2a4599] rounded-full"></div>
+            
+            <div className="grid grid-cols-5 gap-4">
+              {processSteps.map((step, idx) => (
+                <div key={step.step} className="relative">
+                  {/* Step Number Circle */}
+                  <div className="flex justify-center mb-6">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl relative z-10 shadow-lg transition-transform hover:scale-110 ${
+                      idx === 2 ? 'bg-[#F97316] text-white' : 'bg-[#2a4599] text-white'
+                    }`}>
                       {step.step}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-[#010822]">{step.title}</h4>
-                      <p className="text-slate-600 text-sm">{step.desc}</p>
+                  </div>
+                  
+                  {/* Card */}
+                  <div className={`bg-white p-6 rounded-sm border-2 transition-all hover:shadow-xl hover:-translate-y-2 ${
+                    idx === 2 ? 'border-[#F97316]' : 'border-slate-100 hover:border-[#2a4599]'
+                  }`}>
+                    {/* Icon */}
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
+                      idx === 2 ? 'bg-[#F97316]/10' : 'bg-[#2a4599]/10'
+                    }`}>
+                      <step.icon className={idx === 2 ? 'text-[#F97316]' : 'text-[#2a4599]'} size={24} />
+                    </div>
+                    
+                    {/* Title */}
+                    <h4 className="font-bold text-[#010822] text-lg mb-2">{step.title}</h4>
+                    
+                    {/* Description */}
+                    <p className="text-slate-600 text-sm mb-4 min-h-[60px]">{step.desc}</p>
+                    
+                    {/* Duration & Highlight */}
+                    <div className="pt-4 border-t border-slate-100 space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Clock size={12} />
+                        <span>{step.duration}</span>
+                      </div>
+                      <div className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                        idx === 2 ? 'bg-[#F97316]/10 text-[#F97316]' : 'bg-[#2a4599]/10 text-[#2a4599]'
+                      }`}>
+                        {step.highlight}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
+          </div>
 
-            <div className="relative">
-              <img 
-                src={PROCESS_IMG}
-                alt="Construction Process"
-                className="w-full h-auto rounded-sm shadow-xl"
-              />
-              <div className="absolute -bottom-6 -left-6 bg-[#F97316] text-white p-6 rounded-sm shadow-lg">
-                <div className="text-3xl font-bold">400+</div>
-                <div className="text-sm">Quality Checkpoints</div>
+          {/* Process Timeline - Mobile/Tablet */}
+          <div className="lg:hidden space-y-6">
+            {processSteps.map((step, idx) => (
+              <div key={step.step} className="flex gap-4">
+                {/* Left - Timeline */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg shadow-lg flex-shrink-0 ${
+                    idx === 2 ? 'bg-[#F97316] text-white' : 'bg-[#2a4599] text-white'
+                  }`}>
+                    {step.step}
+                  </div>
+                  {idx < processSteps.length - 1 && (
+                    <div className="w-0.5 h-full bg-gradient-to-b from-[#2a4599] to-slate-200 my-2"></div>
+                  )}
+                </div>
+                
+                {/* Right - Content */}
+                <div className={`flex-1 bg-white p-6 rounded-sm border-2 mb-2 ${
+                  idx === 2 ? 'border-[#F97316]' : 'border-slate-100'
+                }`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      idx === 2 ? 'bg-[#F97316]/10' : 'bg-[#2a4599]/10'
+                    }`}>
+                      <step.icon className={idx === 2 ? 'text-[#F97316]' : 'text-[#2a4599]'} size={20} />
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      idx === 2 ? 'bg-[#F97316]/10 text-[#F97316]' : 'bg-[#2a4599]/10 text-[#2a4599]'
+                    }`}>
+                      {step.highlight}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-[#010822] text-lg mb-2">{step.title}</h4>
+                  <p className="text-slate-600 text-sm mb-3">{step.desc}</p>
+                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <Clock size={12} />
+                    <span>{step.duration}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-16">
+            <p className="text-slate-600 mb-6">Ready to start your construction journey?</p>
+            <Link to="/calculator">
+              <Button 
+                data-testid="process-cta"
+                className="bg-[#F97316] hover:bg-[#ea580c] text-white font-bold px-10 py-6 text-lg rounded-sm shadow-lg hover:shadow-xl transition-all"
+              >
+                Start With Free Consultation
+                <ArrowRight className="ml-2" size={20} />
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
