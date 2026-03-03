@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,8 +22,15 @@ const AdminLogin = () => {
     password: ''
   });
 
-  const { login } = useAuth();
+  const { login, token } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      navigate('/admin/dashboard', { replace: true });
+    }
+  }, [token, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,13 +49,13 @@ const AdminLogin = () => {
 
       const response = await axios.post(`${API}${endpoint}`, payload);
       
+      // Login will update context and trigger useEffect redirect
       login(response.data.token, {
         email: response.data.email,
         name: response.data.name
       });
       
       toast.success(isRegister ? 'Account created successfully!' : 'Welcome back!');
-      navigate('/admin/dashboard');
     } catch (error) {
       const message = error.response?.data?.detail || 'Authentication failed';
       toast.error(message);
