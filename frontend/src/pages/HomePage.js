@@ -44,11 +44,46 @@ const HomePage = () => {
   ];
 
   const processSteps = [
-    { step: '01', title: 'Consultation', desc: 'Share your vision and requirements' },
-    { step: '02', title: 'Planning', desc: 'Detailed drawings and material selection' },
-    { step: '03', title: 'Agreement', desc: 'Transparent pricing with no hidden costs' },
-    { step: '04', title: 'Construction', desc: 'Quality execution with regular updates' },
-    { step: '05', title: 'Handover', desc: 'On-time delivery with warranty' },
+    { 
+      step: '01', 
+      title: 'Free Consultation', 
+      desc: 'Share your vision, plot details & requirements. Our expert visits your site for assessment.',
+      icon: MessageSquare,
+      duration: '1-2 Days',
+      highlight: 'Free Site Visit'
+    },
+    { 
+      step: '02', 
+      title: 'Design & Planning', 
+      desc: 'Receive detailed floor plans, 3D elevations, material specifications & BOQ.',
+      icon: FileText,
+      duration: '7-10 Days',
+      highlight: 'Detailed BOQ'
+    },
+    { 
+      step: '03', 
+      title: 'Agreement & Approval', 
+      desc: 'Transparent fixed-price contract. No hidden costs. Clear payment milestones.',
+      icon: Handshake,
+      duration: '2-3 Days',
+      highlight: 'Fixed Price'
+    },
+    { 
+      step: '04', 
+      title: 'Construction', 
+      desc: 'Quality execution with 400+ checkpoints. Weekly progress updates & site access.',
+      icon: HardHat,
+      duration: 'As Per Plan',
+      highlight: 'Weekly Updates'
+    },
+    { 
+      step: '05', 
+      title: 'Handover & Warranty', 
+      desc: 'On-time possession with complete documentation, warranty & after-sales support.',
+      icon: Key,
+      duration: 'On Schedule',
+      highlight: '1 Year Warranty'
+    },
   ];
 
   const trustBrands = ['Tata Steel', 'UltraTech', 'Asian Paints', 'Havells', 'Jaquar', 'Fenesta'];
