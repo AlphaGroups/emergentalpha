@@ -1,34 +1,163 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Alpha Groups Custom Styles */
+
+/* Hero Section */
+.hero-section {
+  position: relative;
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(1, 8, 34, 0.92) 0%, rgba(42, 69, 153, 0.88) 100%);
+  z-index: 1;
 }
 
-.App-link {
-    color: #61dafb;
+.hero-content {
+  position: relative;
+  z-index: 10;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Card hover effects */
+.service-card {
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Pricing card highlight */
+.pricing-card-premium {
+  position: relative;
+  border: 2px solid #2a4599;
+}
+
+.pricing-card-premium::before {
+  content: 'Most Popular';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #F97316;
+  color: white;
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Trust badge animation */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.trust-badge {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+/* Calculator result highlight */
+.calculator-result {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-left: 4px solid #2a4599;
+}
+
+/* Comparison table */
+.comparison-row:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+/* Admin sidebar */
+.admin-sidebar {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #010822 0%, #1a2744 100%);
+}
+
+/* Stats card */
+.stat-card {
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: scale(1.02);
+}
+
+/* Form input focus */
+.form-input:focus {
+  border-color: #2a4599;
+  box-shadow: 0 0 0 3px rgba(42, 69, 153, 0.15);
+}
+
+/* Button hover animations */
+.btn-primary {
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(42, 69, 153, 0.4);
+}
+
+.btn-accent {
+  transition: all 0.3s ease;
+}
+
+.btn-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero-section {
+    min-height: 80vh;
+  }
+  
+  .pricing-card-premium::before {
+    font-size: 10px;
+    padding: 3px 12px;
+  }
+}
+
+/* Loading spinner */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scroll animation trigger */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s ease;
+}
+
+.scroll-animate.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
