@@ -1,0 +1,156 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Alpha Groups",
+      "tagline": "Building Dreams with Precision & Transparency",
+      "tone": "Professional, Transparent, Tech-Forward, Reliable",
+      "aesthetic": "Modern Corporate Construction (Brick&Bolt meets Swiss Style)",
+      "theme_strategy": "Light Mode Dominant (Trust/Clarity) with Deep Navy Authority Sections"
+    },
+    "typography": {
+      "font_family": {
+        "heading": "Montserrat, sans-serif",
+        "body": "Montserrat, sans-serif",
+        "accent": "Montserrat, sans-serif"
+      },
+      "weights": {
+        "heading": "700 (Bold) or 900 (Black)",
+        "subheading": "600 (SemiBold)",
+        "body": "400 (Regular)"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-6xl tracking-tight",
+        "h2": "text-3xl md:text-5xl tracking-tight",
+        "h3": "text-2xl md:text-3xl",
+        "body": "text-base md:text-lg leading-relaxed"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#2a4599",
+          "foreground": "#ffffff",
+          "description": "Dusk Blue - Main Brand Color"
+        },
+        "secondary": {
+          "DEFAULT": "#010822",
+          "foreground": "#ffffff",
+          "description": "Dark Blue - Authority/Footer/Hero BG"
+        },
+        "accent": {
+          "DEFAULT": "#F97316",
+          "foreground": "#ffffff",
+          "description": "Safety Orange - High Conversion CTAs"
+        },
+        "background": "#ffffff",
+        "surface": "#f8fafc",
+        "muted": "#f1f5f9",
+        "border": "#e2e8f0"
+      },
+      "gradients": {
+        "hero": "linear-gradient(135deg, #010822 0%, #2a4599 100%)",
+        "subtle": "linear-gradient(to bottom, #f8fafc, #ffffff)"
+      }
+    },
+    "layout": {
+      "spacing": "Generous (2x standard). Use p-8, p-12, p-24 for sections.",
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "grid_system": {
+        "marketing": "Mode A: Tetris Grid (Asymmetrical Bento)",
+        "dashboard": "Mode B: High Density Grid (Compact Data)"
+      },
+      "radius": "rounded-none (Sharp/Professional) or rounded-sm (Subtle)"
+    },
+    "visual_enhancers": {
+      "shadows": "shadow-[0_4px_20px_-2px_rgba(0,0,0,0.1)] (Clean Lift)",
+      "borders": "1px solid #e2e8f0",
+      "glassmorphism": "backdrop-blur-md bg-white/80 border border-white/20 (For sticky navs/cards)",
+      "textures": "Subtle noise overlay on Dark Blue sections to prevent banding"
+    },
+    "animation": {
+      "micro": "hover:-translate-y-1 transition-transform duration-300",
+      "scroll": "Fade-in up with stagger for list items",
+      "hero": "Slow zoom on background image"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#2a4599] text-white hover:bg-[#1e3a8a] rounded-sm px-8 py-4 font-bold tracking-wide shadow-lg hover:shadow-xl transition-all",
+      "cta": "bg-[#F97316] text-white hover:bg-[#ea580c] rounded-sm px-8 py-4 font-bold uppercase tracking-widest shadow-orange-500/20",
+      "outline": "border-2 border-[#2a4599] text-[#2a4599] hover:bg-[#2a4599] hover:text-white rounded-sm px-6 py-3 font-semibold"
+    },
+    "cards": {
+      "feature": "bg-white p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group",
+      "pricing": "relative overflow-hidden bg-white border border-slate-200 p-8 hover:border-[#2a4599] transition-colors"
+    },
+    "inputs": {
+      "style": "h-12 bg-slate-50 border-slate-200 focus:border-[#2a4599] focus:ring-1 focus:ring-[#2a4599] rounded-sm"
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_bg": {
+        "url": "https://images.unsplash.com/photo-1622015663319-e97e697503ee?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBsdXh1cnklMjB2aWxsYSUyMGV4dGVyaW9yJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MjUzOTI0OHww&ixlib=rb-4.1.0&q=85",
+        "alt": "Modern Luxury Villa Exterior",
+        "usage": "Hero Section Background or Main Visual"
+      },
+      "about_process": {
+        "url": "https://images.unsplash.com/photo-1765378025255-5c2ff04563f4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBzaXRlJTIwZW5naW5lZXIlMjBibHVlcHJpbnQlMjBzYWZldHl8ZW58MHx8fHwxNzcyNTM5MjUyfDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Engineers Reviewing Plans",
+        "usage": "About Us or Process Section"
+      },
+      "service_villas": {
+        "url": "https://images.unsplash.com/photo-1757439402101-55d1da381e70?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBsdXh1cnklMjB2aWxsYSUyMGV4dGVyaW9yJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MjUzOTI0OHww&ixlib=rb-4.1.0&q=85",
+        "alt": "Luxury Villa with Pool",
+        "usage": "Services - Villas Card"
+      },
+      "service_interiors": {
+        "url": "https://images.unsplash.com/photo-1672927936377-97d1be3976cd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjBsdXh1cnl8ZW58MHx8fHwxNzcyNTM5MjU2fDA&ixlib=rb-4.1.0&q=85",
+        "alt": "Modern Living Room Interior",
+        "usage": "Services - Interiors Card"
+      },
+      "trust_signals": {
+        "instruction": "Use text labels 'Tata Steel', 'UltraTech', 'Asian Paints' styled as bold, grayscale logos if actual SVGs are missing. Place them in a 'Marquee' or 'Grid' layout."
+      }
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px, size 24px or 32px"
+    }
+  },
+  "page_strategies": {
+    "home": {
+      "sections": [
+        "Hero: Split screen (Text Left, Image Right) or Full BG with Overlay. Headline: 'Build Your Dream Home Without the Headaches'.",
+        "Trust Bar: 'Trusted by 500+ Families' + Brand Logos.",
+        "Pain Points vs Alpha: Comparison Table (Delays vs On-Time, Hidden Costs vs Fixed Price).",
+        "Packages: 3-Tier Pricing (Basic, Premium, Luxury) displayed in a Bento Grid.",
+        "Calculator Teaser: 'Estimate Your Construction Cost in 30 Seconds'.",
+        "Testimonials: Carousel of happy families."
+      ]
+    },
+    "calculator": {
+      "style": "Wizard Form. Step 1: Area, Step 2: Type, Step 3: Package. Result: Estimated Cost + 'Get Detailed Quote' CTA."
+    },
+    "admin": {
+      "style": "Sidebar Layout. High density data tables for Leads. Dashboard with key metrics (Total Leads, Conversion Rate)."
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react' and 'framer-motion' if not present.",
+    "2. THEME: Configure tailwind.config.js with the custom colors (Dusk Blue, Dark Blue, Accent Orange).",
+    "3. FONTS: Import Montserrat from Google Fonts in index.css.",
+    "4. COMPONENTS: Use Shadcn for complex interactive elements (Forms, Dialogs, Calculator) but style them to match the 'Alpha Groups' brand (Square corners, Blue borders).",
+    "5. LAYOUT: Use the 'Bento Grid' strategy for the Services and Packages sections. Don't just stack cards vertically.",
+    "6. ADMIN: Create a separate layout for '/admin' routes with a sidebar.",
+    "7. IMAGES: Use the provided Unsplash URLs. Do not use placeholders.",
+    "8. TESTID: Add data-testid to all buttons and inputs."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid generic 'AI Slop' designs. Use generous spacing (p-12+).",
+    "Do not use gradients for text unless specifically asked.",
+    "Use 'sonner' for toast notifications.",
+    "Ensure all interactive elements have hover states.",
+    "Mobile Responsiveness is critical - check grid-cols-1 for mobile."
+  ]
+}
