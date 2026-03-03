@@ -12,7 +12,12 @@ import {
   Clock,
   IndianRupee,
   Phone,
-  Calculator
+  Calculator,
+  MessageSquare,
+  FileText,
+  Handshake,
+  HardHat,
+  Key
 } from 'lucide-react';
 
 const HERO_BG = 'https://images.unsplash.com/photo-1622015663319-e97e697503ee?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBsdXh1cnklMjB2aWxsYSUyMGV4dGVyaW9yJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MjUzOTI0OHww&ixlib=rb-4.1.0&q=85';
