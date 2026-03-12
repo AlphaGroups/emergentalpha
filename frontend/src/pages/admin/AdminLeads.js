@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,11 +40,11 @@ const AdminLeads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      
+
       const response = await axios.get(`${API}/admin/leads?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -55,11 +55,11 @@ const AdminLeads = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, token]);
 
   useEffect(() => {
     fetchLeads();
-  }, [token, statusFilter]);
+  }, [fetchLeads]);
 
   const updateLeadStatus = async (leadId, newStatus) => {
     try {

@@ -57,7 +57,11 @@
   },
   "scripts": {
     "start": "craco start",
+    "start:dev": "craco start --env NODE_ENV=development",
+    "start:prod": "craco start --env NODE_ENV=production",
     "build": "craco build",
+    "build:dev": "craco build --mode development",
+    "build:prod": "craco build --mode production",
     "test": "craco test"
   },
   "browserslist": {

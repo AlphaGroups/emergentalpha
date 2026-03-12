@@ -14,7 +14,16 @@ import jwt
 import bcrypt
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+
+# Load environment-specific .env file
+node_env = os.getenv('NODE_ENV', 'development')
+env_file = ROOT_DIR / f'.env.{node_env}'
+
+# Load .env.{NODE_ENV} if exists, otherwise fall back to .env
+if env_file.exists():
+    load_dotenv(env_file)
+else:
+    load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
