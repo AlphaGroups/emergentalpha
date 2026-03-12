@@ -2,7 +2,7 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from supabase import create_client, Client
 import os
 import logging
 from pathlib import Path
@@ -25,10 +25,10 @@ if env_file.exists():
 else:
     load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Supabase client
+SUPABASE_URL = os.environ.get('SUPABASE_URL')
+SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_ANON_KEY')
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # JWT Config
 JWT_SECRET = os.environ.get('JWT_SECRET', 'alpha-groups-secret-key-2024')
@@ -63,6 +63,7 @@ class Lead(BaseModel):
     message: Optional[str] = None
     source: str = "website"
     status: str = "new"
+    notes: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class QuoteRequest(BaseModel):
@@ -161,41 +162,49 @@ async def root():
 
 @api_router.post("/leads", response_model=Lead)
 async def create_lead(lead_data: LeadCreate):
-    lead = Lead(**lead_data.model_dump())
-    doc = lead.model_dump()
-    await db.leads.insert_one(doc)
-    return lead
+    lead_id = str(uuid.uuid4())
+    lead_dict = lead_data.model_dump()
+    lead_dict['id'] = lead_id
+    lead_dict['status'] = 'new'
+    lead_dict['created_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = supabase.table("leads").insert(lead_dict).execute()
+    return Lead(**result.data[0])
 
 @api_router.post("/quote-request", response_model=Lead)
 async def create_quote_request(quote: QuoteRequest):
-    lead = Lead(
-        name=quote.name,
-        phone=quote.phone,
-        email=quote.email,
-        project_type=quote.project_type,
-        plot_area=quote.plot_area,
-        location=quote.location,
-        budget=f"₹{quote.estimated_cost:,.0f} ({quote.package_type})",
-        message=quote.message,
-        source="calculator"
-    )
-    doc = lead.model_dump()
-    await db.leads.insert_one(doc)
-    return lead
+    lead_id = str(uuid.uuid4())
+    lead_dict = {
+        "id": lead_id,
+        "name": quote.name,
+        "phone": quote.phone,
+        "email": quote.email,
+        "project_type": quote.project_type,
+        "plot_area": quote.plot_area,
+        "location": quote.location,
+        "budget": f"₹{quote.estimated_cost:,.0f} ({quote.package_type})",
+        "message": quote.message,
+        "source": "calculator",
+        "status": "new",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    result = supabase.table("leads").insert(lead_dict).execute()
+    return Lead(**result.data[0])
 
 @api_router.post("/calculate", response_model=CalculatorResult)
 async def calculate_cost(calc_input: CalculatorInput):
     package = calc_input.package_type.lower()
     project = calc_input.project_type.lower().replace(" ", "_")
-    
+
     if package not in PACKAGE_RATES:
         raise HTTPException(status_code=400, detail="Invalid package type")
     if project not in PACKAGE_RATES[package]:
         raise HTTPException(status_code=400, detail="Invalid project type")
-    
+
     base_rate = PACKAGE_RATES[package][project]
     estimated_cost = calc_input.plot_area * base_rate
-    
+
     return CalculatorResult(
         plot_area=calc_input.plot_area,
         project_type=calc_input.project_type,
@@ -261,37 +270,45 @@ async def get_packages():
 
 @api_router.post("/admin/login")
 async def admin_login(creds: AdminLogin):
-    admin = await db.admins.find_one({"email": creds.email}, {"_id": 0})
+    result = supabase.table("admins").select("*").eq("email", creds.email).execute()
+    admin = result.data[0] if result.data else None
+    
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     token = create_token(creds.email)
     return {"token": token, "email": admin["email"], "name": admin["name"]}
 
 @api_router.post("/admin/register")
 async def admin_register(admin_data: AdminCreate):
-    existing = await db.admins.find_one({"email": admin_data.email})
-    if existing:
+    existing = supabase.table("admins").select("*").eq("email", admin_data.email).execute()
+    if existing.data:
         raise HTTPException(status_code=400, detail="Admin already exists")
-    
-    doc = {
+
+    admin_dict = {
         "id": str(uuid.uuid4()),
         "email": admin_data.email,
         "password": hash_password(admin_data.password),
         "name": admin_data.name,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.admins.insert_one(doc)
-    token = create_token(admin_data.email)
-    return {"token": token, "email": doc["email"], "name": doc["name"]}
+    result = supabase.table("admins").insert(admin_dict).execute()
+    admin = result.data[0]
+    token = create_token(admin["email"])
+    return {"token": token, "email": admin["email"], "name": admin["name"]}
 
 @api_router.get("/admin/me")
 async def get_admin_profile(email: str = Depends(verify_token)):
-    admin = await db.admins.find_one({"email": email}, {"_id": 0, "password": 0})
+    result = supabase.table("admins").select("*").eq("email", email).execute()
+    admin = result.data[0] if result.data else None
+    
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
+    
+    # Remove password from response
+    admin.pop("password", None)
     return admin
 
 # ===================== ADMIN LEADS MANAGEMENT =====================
@@ -302,39 +319,41 @@ async def get_all_leads(
     source: Optional[str] = None,
     email: str = Depends(verify_token)
 ):
-    query = {}
-    if status:
-        query["status"] = status
-    if source:
-        query["source"] = source
+    query = supabase.table("leads").select("*")
     
-    leads = await db.leads.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return leads
+    if status:
+        query = query.eq("status", status)
+    if source:
+        query = query.eq("source", source)
+    
+    result = query.order("created_at", desc=True).execute()
+    return [Lead(**lead) for lead in result.data]
 
 @api_router.get("/admin/leads/{lead_id}", response_model=Lead)
 async def get_lead(lead_id: str, email: str = Depends(verify_token)):
-    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    result = supabase.table("leads").select("*").eq("id", lead_id).execute()
+    lead = result.data[0] if result.data else None
+    
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    return lead
+    return Lead(**lead)
 
 @api_router.patch("/admin/leads/{lead_id}", response_model=Lead)
 async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(verify_token)):
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No update data provided")
-    
-    result = await db.leads.update_one({"id": lead_id}, {"$set": update_data})
-    if result.matched_count == 0:
+
+    result = supabase.table("leads").update(update_data).eq("id", lead_id).execute()
+    if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
-    
-    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
-    return lead
+
+    return Lead(**result.data[0])
 
 @api_router.delete("/admin/leads/{lead_id}")
 async def delete_lead(lead_id: str, email: str = Depends(verify_token)):
-    result = await db.leads.delete_one({"id": lead_id})
-    if result.deleted_count == 0:
+    result = supabase.table("leads").delete().eq("id", lead_id).execute()
+    if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted successfully"}
 
@@ -342,21 +361,34 @@ async def delete_lead(lead_id: str, email: str = Depends(verify_token)):
 
 @api_router.get("/admin/analytics")
 async def get_analytics(email: str = Depends(verify_token)):
-    total_leads = await db.leads.count_documents({})
-    new_leads = await db.leads.count_documents({"status": "new"})
-    contacted_leads = await db.leads.count_documents({"status": "contacted"})
-    converted_leads = await db.leads.count_documents({"status": "converted"})
+    # Total leads
+    total_result = supabase.table("leads").select("*", count="exact").execute()
+    total_leads = total_result.count
     
+    # Status counts
+    new_result = supabase.table("leads").select("*", count="exact").eq("status", "new").execute()
+    new_leads = new_result.count
+    
+    contacted_result = supabase.table("leads").select("*", count="exact").eq("status", "contacted").execute()
+    contacted_leads = contacted_result.count
+    
+    converted_result = supabase.table("leads").select("*", count="exact").eq("status", "converted").execute()
+    converted_leads = converted_result.count
+
     # Source breakdown
-    website_leads = await db.leads.count_documents({"source": "website"})
-    calculator_leads = await db.leads.count_documents({"source": "calculator"})
+    website_result = supabase.table("leads").select("*", count="exact").eq("source", "website").execute()
+    website_leads = website_result.count
     
+    calculator_result = supabase.table("leads").select("*", count="exact").eq("source", "calculator").execute()
+    calculator_leads = calculator_result.count
+
     # Project type breakdown
-    pipeline = [
-        {"$group": {"_id": "$project_type", "count": {"$sum": 1}}}
-    ]
-    project_breakdown = await db.leads.aggregate(pipeline).to_list(100)
-    
+    all_leads_result = supabase.table("leads").select("project_type").execute()
+    project_breakdown = {}
+    for lead in all_leads_result.data:
+        pt = lead.get("project_type", "unknown")
+        project_breakdown[pt] = project_breakdown.get(pt, 0) + 1
+
     return {
         "total_leads": total_leads,
         "new_leads": new_leads,
@@ -367,7 +399,7 @@ async def get_analytics(email: str = Depends(verify_token)):
             "website": website_leads,
             "calculator": calculator_leads
         },
-        "project_breakdown": {item["_id"]: item["count"] for item in project_breakdown if item["_id"]}
+        "project_breakdown": project_breakdown
     }
 
 # Include router and middleware
@@ -386,7 +418,3 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
