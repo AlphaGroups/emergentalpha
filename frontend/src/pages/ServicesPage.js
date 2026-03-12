@@ -64,7 +64,7 @@ const ServicesPage = () => {
       icon: Building2,
       title: 'G+5 Apartments',
       description: 'Multi-story residential complex construction with focus on structural integrity and modern amenities.',
-      image: '/G+5 Apartments.jpg',
+      image: '/GApartments.jpg',
       features: [
         'Up to G+5 floors',
         'Earthquake-resistant design',
