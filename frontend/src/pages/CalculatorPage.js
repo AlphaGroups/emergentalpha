@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -13,6 +13,7 @@ import {
 import { Calculator, ArrowRight, ArrowLeft, Check, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { calculateConstructionCost } from '@/lib/packageData';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -55,27 +56,25 @@ const CalculatorPage = () => {
     'Kukatpally', 'Manikonda', 'Puppalaguda', 'Financial District', 'Other'
   ];
 
-  const calculateCost = async () => {
+  const calculateCost = () => {
     if (!formData.plotArea || !formData.projectType || !formData.packageType) {
       toast.error('Please fill all fields');
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API}/calculate`, {
-        plot_area: parseFloat(formData.plotArea),
-        project_type: formData.projectType,
-        package_type: formData.packageType
-      });
-      setResult(response.data);
-      setStep(2);
-    } catch (error) {
-      toast.error('Calculation failed. Please try again.');
-      console.error(error);
-    } finally {
-      setLoading(false);
+    const result = calculateConstructionCost(
+      parseFloat(formData.plotArea),
+      formData.projectType,
+      formData.packageType
+    );
+
+    if (!result) {
+      toast.error('Invalid project or package type');
+      return;
     }
+
+    setResult(result);
+    setStep(2);
   };
 
   const submitQuote = async () => {

@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { 
-  Home, 
-  Building2, 
-  School, 
-  Paintbrush, 
+import {
+  Home,
+  Building2,
+  School,
+  Paintbrush,
   ArrowRight,
   Check,
   Ruler,
@@ -13,9 +13,6 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 
-const SERVICE_VILLA = 'https://images.unsplash.com/photo-1757439402101-55d1da381e70?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBsdXh1cnklMjB2aWxsYSUyMGV4dGVyaW9yJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MjUzOTI0OHww&ixlib=rb-4.1.0&q=85';
-const SERVICE_INTERIOR = 'https://images.unsplash.com/photo-1672927936377-97d1be3976cd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBpbnRlcmlvciUyMGRlc2lnbiUyMGxpdmluZyUyMHJvb20lMjBsdXh1cnl8ZW58MHx8fHwxNzcyNTM5MjU2fDA&ixlib=rb-4.1.0&q=85';
-
 const ServicesPage = () => {
   const services = [
     {
@@ -23,7 +20,7 @@ const ServicesPage = () => {
       icon: Home,
       title: 'Independent Houses',
       description: 'Custom-designed independent homes built to your specifications with premium materials and modern amenities.',
-      image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
+      image: '/Independent Houses.jpg',
       features: [
         'Custom floor plans accepted',
         'Vastu-compliant designs',
@@ -45,7 +42,7 @@ const ServicesPage = () => {
       icon: Building2,
       title: 'Luxury Villas',
       description: 'Premium villa construction with world-class amenities, designer finishes, and smart home integration.',
-      image: SERVICE_VILLA,
+      image: '/Luxury Villas.jpg',
       features: [
         'Premium imported materials',
         'Smart home ready',
@@ -67,7 +64,7 @@ const ServicesPage = () => {
       icon: Building2,
       title: 'G+5 Apartments',
       description: 'Multi-story residential complex construction with focus on structural integrity and modern amenities.',
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
+      image: '/G+5 Apartments.jpg',
       features: [
         'Up to G+5 floors',
         'Earthquake-resistant design',
@@ -89,7 +86,7 @@ const ServicesPage = () => {
       icon: School,
       title: 'School Buildings',
       description: 'Educational infrastructure built to safety standards with focus on functionality and durability.',
-      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800',
+      image: '/School Buildings.jpg',
       features: [
         'Child-safe construction',
         'Proper ventilation design',
@@ -111,7 +108,7 @@ const ServicesPage = () => {
       icon: Paintbrush,
       title: 'Residential Interiors',
       description: 'Transform your living spaces with expert interior design and execution - from modern to traditional styles.',
-      image: SERVICE_INTERIOR,
+      image: '/Residential Interiors.jpg',
       features: [
         'Custom design consultation',
         'Modular kitchen fitting',

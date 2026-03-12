@@ -1,15 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowRight } from 'lucide-react';
-import axios from 'axios';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import { PACKAGES, MATERIAL_SPECS, QUALITY_CHECKPOINTS } from '@/lib/packageData';
 
 const PackagesPage = () => {
-  const [packages, setPackages] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [packages] = useState(PACKAGES);
   const [selectedType, setSelectedType] = useState('independent_house');
 
   const projectTypes = [
@@ -19,28 +15,6 @@ const PackagesPage = () => {
     { key: 'school', label: 'School' },
     { key: 'interior', label: 'Interior' },
   ];
-
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const response = await axios.get(`${API}/packages`);
-        setPackages(response.data);
-      } catch (error) {
-        console.error('Failed to fetch packages:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPackages();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#2a4599] border-t-transparent"></div>
-      </div>
-    );
-  }
 
   const packageOrder = ['basic', 'premium', 'luxury'];
 
@@ -160,44 +134,7 @@ const PackagesPage = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                category: 'Steel',
-                basic: 'Tata/JSW TMT Fe500',
-                premium: 'Tata Tiscon Fe500D',
-                luxury: 'Tata Tiscon Super Fe550D',
-              },
-              {
-                category: 'Cement',
-                basic: 'UltraTech/ACC OPC 53',
-                premium: 'UltraTech Premium OPC 53',
-                luxury: 'ACC Gold/Birla A1',
-              },
-              {
-                category: 'Electrical',
-                basic: 'Finolex Wires + Standard MCBs',
-                premium: 'Havells + Modular Switches',
-                luxury: 'Schneider Electric Premium',
-              },
-              {
-                category: 'Plumbing',
-                basic: 'Astral CPVC Pipes',
-                premium: 'Supreme CPVC + Hindware',
-                luxury: 'Jaquar Complete Solution',
-              },
-              {
-                category: 'Paints',
-                basic: 'Asian Paints Tractor Emulsion',
-                premium: 'Asian Paints Royale',
-                luxury: 'Asian Paints Ultima/Berger Silk',
-              },
-              {
-                category: 'Windows',
-                basic: 'Aluminium Sliding',
-                premium: 'uPVC (Fenesta/LG)',
-                luxury: 'Fenesta Pro + Tinted Glass',
-              },
-            ].map((spec) => (
+            {MATERIAL_SPECS.map((spec) => (
               <div key={spec.category} className="bg-white p-6 border border-slate-100">
                 <h4 className="font-bold text-[#010822] mb-4 pb-2 border-b border-slate-100">
                   {spec.category}
@@ -235,12 +172,7 @@ const PackagesPage = () => {
           </div>
 
           <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { stage: 'Foundation', checks: '85 Checkpoints', items: ['Soil Testing', 'Excavation Depth', 'PCC Level', 'Steel Placement'] },
-              { stage: 'Structure', checks: '120 Checkpoints', items: ['Column Alignment', 'Beam Reinforcement', 'Slab Thickness', 'Curing Process'] },
-              { stage: 'Finishing', checks: '145 Checkpoints', items: ['Plastering Quality', 'Tile Alignment', 'Paint Finish', 'Hardware Fitting'] },
-              { stage: 'Final', checks: '50 Checkpoints', items: ['Electrical Testing', 'Plumbing Pressure', 'Door Operation', 'Final Inspection'] },
-            ].map((stage) => (
+            {QUALITY_CHECKPOINTS.map((stage) => (
               <div key={stage.stage} className="bg-white/10 backdrop-blur-sm p-6 rounded-sm">
                 <div className="text-[#F97316] font-bold text-lg mb-1">{stage.stage}</div>
                 <div className="text-white/80 text-sm mb-4">{stage.checks}</div>
