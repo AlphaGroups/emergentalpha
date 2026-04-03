@@ -1,6 +1,6 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { usePartnerAuth } from '@/context/PartnerAuthContext';
-import { LayoutDashboard, Users, FileText, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, LogOut, Menu, X, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { LOGO_URL } from '@/config/constants';
@@ -24,6 +24,7 @@ const PartnerLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/partner/dashboard', icon: LayoutDashboard },
+    { name: 'Add Lead', path: '/partner/add-lead', icon: UserPlus },
     { name: 'My Referrals', path: '/partner/leads', icon: Users },
     { name: 'Materials', path: '/partner/materials', icon: FileText },
   ];
