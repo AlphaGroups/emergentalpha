@@ -116,9 +116,9 @@ class AlphaGroupsAPITester:
         test_data = {
             "plot_area": 2400,
             "project_type": "invalid_type",
-            "package_type": "premium"
+            "package_type": "select"
         }
-        return self.run_test("Calculate Invalid Type", "POST", "calculate", 400, test_data)
+        return self.run_test("Calculate Invalid Type", "POST", "calculate", 400, test_data, token_type=None)
 
     def test_create_lead(self):
         """Test lead creation"""
