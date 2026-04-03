@@ -149,7 +149,7 @@ class AlphaGroupsAPITester:
             "estimated_cost": 8850000,
             "message": "Test quote request"
         }
-        success, response = self.run_test("Create Quote Request", "POST", "quote-request", 200, test_data)
+        success, response = self.run_test("Create Quote Request", "POST", "quote-request", 200, test_data, token_type=None)
         if success and 'id' in response:
             print(f"✅ Quote request created with ID: {response['id']}")
             return response['id']
