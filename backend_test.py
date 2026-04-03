@@ -233,6 +233,133 @@ class AlphaGroupsAPITester:
         self.admin_token = old_token
         return not success  # Should fail with 401
 
+    # NEW API TESTS FOR UPDATED FEATURES
+    
+    def test_collaboration_leads(self):
+        """Test collaboration lead creation"""
+        test_data = {
+            "name": "Test Landowner",
+            "phone": "9876543212",
+            "email": "landowner@test.com",
+            "land_location": "Gachibowli, Hyderabad",
+            "land_size": "500 sq.yards",
+            "intent": "landowner",
+            "message": "Interested in joint development"
+        }
+        success, response = self.run_test("Create Collaboration Lead", "POST", "collaboration/leads", 200, test_data, token_type=None)
+        if success and 'id' in response:
+            print(f"✅ Collaboration lead created with ID: {response['id']}")
+            return response['id']
+        return None
+
+    def test_vendor_registration(self):
+        """Test vendor registration"""
+        test_data = {
+            "name": "Test Contractor",
+            "company_name": "Test Construction Co",
+            "phone": "9876543213",
+            "email": "contractor@test.com",
+            "website": "https://testconstruction.com",
+            "categories": ["Contractor", "Material Supplier"],
+            "description": "Experienced construction contractor with 10+ years"
+        }
+        success, response = self.run_test("Register Vendor", "POST", "vendors", 200, test_data, token_type=None)
+        if success and 'vendor_id' in response:
+            print(f"✅ Vendor registered with ID: {response['vendor_id']}")
+            return response['vendor_id']
+        return None
+
+    def test_referral_terms(self):
+        """Test referral terms endpoint"""
+        success, response = self.run_test("Get Referral Terms", "GET", "referral-terms", 200, token_type=None)
+        if success:
+            required_fields = ['commission_percent', 'validity_days', 'payment_timeline_days', 'terms_content']
+            for field in required_fields:
+                if field not in response:
+                    print(f"❌ Missing referral terms field: {field}")
+                    return False
+            print(f"✅ Referral terms: {response['commission_percent']}% commission")
+        return success
+
+    def test_listings_endpoint(self):
+        """Test sales listings endpoint"""
+        success, response = self.run_test("Get Listings", "GET", "listings", 200, token_type=None)
+        if success:
+            print(f"✅ Retrieved {len(response)} listings")
+            return response
+        return []
+
+    def test_admin_packages(self):
+        """Test admin packages management"""
+        if not self.admin_token:
+            print("❌ No admin token available for packages test")
+            return False
+        success, response = self.run_test("Admin Get Packages", "GET", "admin/packages", 200, token_type='admin')
+        if success:
+            if 'configs' not in response or 'features' not in response:
+                print(f"❌ Missing configs or features in admin packages response")
+                return False
+            print(f"✅ Admin packages: {len(response['configs'])} configs, {len(response['features'])} features")
+        return success
+
+    def test_admin_partners(self):
+        """Test admin partners management"""
+        if not self.admin_token:
+            print("❌ No admin token available for partners test")
+            return False
+        success, response = self.run_test("Admin Get Partners", "GET", "admin/partners", 200, token_type='admin')
+        if success:
+            print(f"✅ Retrieved {len(response)} partners")
+            return response
+        return []
+
+    def test_create_partner(self):
+        """Test partner creation by admin"""
+        if not self.admin_token:
+            print("❌ No admin token available for partner creation")
+            return False
+        
+        test_data = {
+            "name": "Test Partner",
+            "email": self.partner_email,
+            "phone": "9876543214",
+            "password": self.partner_password,
+            "commission_percent": 2.5
+        }
+        success, response = self.run_test("Create Partner", "POST", "admin/partners", 200, test_data, token_type='admin')
+        if success and 'referral_code' in response:
+            print(f"✅ Partner created with referral code: {response['referral_code']}")
+            return response
+        return None
+
+    def test_partner_login(self):
+        """Test partner login"""
+        test_data = {
+            "email": self.partner_email,
+            "password": self.partner_password
+        }
+        success, response = self.run_test("Partner Login", "POST", "partner/login", 200, test_data, token_type=None)
+        if success and 'token' in response:
+            self.partner_token = response['token']
+            print(f"✅ Partner login successful")
+            return True
+        return False
+
+    def test_partner_dashboard(self):
+        """Test partner dashboard"""
+        if not self.partner_token:
+            print("❌ No partner token available for dashboard test")
+            return False
+        success, response = self.run_test("Partner Dashboard", "GET", "partner/dashboard", 200, token_type='partner')
+        if success:
+            required_sections = ['partner', 'stats']
+            for section in required_sections:
+                if section not in response:
+                    print(f"❌ Missing dashboard section: {section}")
+                    return False
+            print(f"✅ Partner dashboard: {response['stats']['total_leads']} leads")
+        return success
+
 def main():
     print("🚀 Starting Alpha Groups API Tests")
     print("=" * 50)
