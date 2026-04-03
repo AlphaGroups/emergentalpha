@@ -1,10 +1,20 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Users, LogOut, Menu, X } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  Package, 
+  Handshake, 
+  Building2, 
+  Wrench, 
+  FileText,
+  LogOut, 
+  Menu, 
+  X 
+} from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_7631421a-a6b0-45d2-a236-8129ee8a64ce/artifacts/ep212nvd_Alpha%20Logo.jpg';
+import { LOGO_URL } from '@/config/constants';
 
 const AdminLayout = () => {
   const { admin, token, logout, loading } = useAuth();
@@ -26,6 +36,12 @@ const AdminLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Leads', path: '/admin/leads', icon: Users },
+    { name: 'Packages', path: '/admin/packages', icon: Package },
+    { name: 'Partners', path: '/admin/partners', icon: Handshake },
+    { name: 'Listings', path: '/admin/listings', icon: Building2 },
+    { name: 'Vendors', path: '/admin/vendors', icon: Wrench },
+    { name: 'Collaboration', path: '/admin/collaboration', icon: Users },
+    { name: 'Terms', path: '/admin/terms', icon: FileText },
   ];
 
   const isActive = (path) => location.pathname === path || (path === '/admin/dashboard' && location.pathname === '/admin');
@@ -52,12 +68,13 @@ const AdminLayout = () => {
             <img 
               src={LOGO_URL} 
               alt="Alpha Groups" 
-              className="h-12 w-auto object-contain bg-white p-2 rounded"
+              className="h-12 w-auto object-contain"
             />
           </Link>
+          <div className="mt-2 text-xs text-slate-400">Admin Portal</div>
         </div>
 
-        <nav className="px-4 space-y-2">
+        <nav className="px-4 space-y-1">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -71,7 +88,7 @@ const AdminLayout = () => {
               }`}
             >
               <item.icon size={20} />
-              <span className="font-medium">{item.name}</span>
+              <span className="font-medium text-sm">{item.name}</span>
             </Link>
           ))}
         </nav>
