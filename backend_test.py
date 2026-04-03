@@ -227,10 +227,10 @@ class AlphaGroupsAPITester:
 
     def test_unauthorized_access(self):
         """Test unauthorized access to admin endpoints"""
-        old_token = self.token
-        self.token = None
-        success = self.run_test("Unauthorized Analytics", "GET", "admin/analytics", 401)[0]
-        self.token = old_token
+        old_token = self.admin_token
+        self.admin_token = None
+        success = self.run_test("Unauthorized Analytics", "GET", "admin/analytics", 401, token_type='admin')[0]
+        self.admin_token = old_token
         return not success  # Should fail with 401
 
 def main():
