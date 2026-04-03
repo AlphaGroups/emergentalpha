@@ -207,10 +207,10 @@ class AlphaGroupsAPITester:
 
     def test_admin_leads(self):
         """Test admin leads endpoint"""
-        if not self.token:
-            print("❌ No token available for leads test")
+        if not self.admin_token:
+            print("❌ No admin token available for leads test")
             return False
-        success, response = self.run_test("Admin Get Leads", "GET", "admin/leads", 200)
+        success, response = self.run_test("Admin Get Leads", "GET", "admin/leads", 200, token_type='admin')
         if success:
             print(f"✅ Retrieved {len(response)} leads")
             return response
