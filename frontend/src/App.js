@@ -32,6 +32,7 @@ import PartnerLogin from "@/pages/partner/PartnerLogin";
 import PartnerDashboard from "@/pages/partner/PartnerDashboard";
 import PartnerLeads from "@/pages/partner/PartnerLeads";
 import PartnerMaterials from "@/pages/partner/PartnerMaterials";
+import PartnerAddLead from "@/pages/partner/PartnerAddLead";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -91,6 +92,7 @@ function App() {
               <Route path="/partner" element={<PartnerLayout />}>
                 <Route index element={<PartnerDashboard />} />
                 <Route path="dashboard" element={<PartnerDashboard />} />
+                <Route path="add-lead" element={<PartnerAddLead />} />
                 <Route path="leads" element={<PartnerLeads />} />
                 <Route path="materials" element={<PartnerMaterials />} />
               </Route>

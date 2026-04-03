@@ -37,6 +37,11 @@ const PartnerLogin = () => {
   const [resetPhone, setResetPhone] = useState('');
   const [resetOTP, setResetOTP] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
+  // Public lead form
+  const [showRefForm, setShowRefForm] = useState(false);
+  const [refLead, setRefLead] = useState({ name: '', phone: '', location: '', requirement: '', referral_code: '' });
+  const [refSubmitted, setRefSubmitted] = useState(false);
+  const [refLoading, setRefLoading] = useState(false);
 
   const { login, token } = usePartnerAuth();
   const navigate = useNavigate();
@@ -209,8 +214,36 @@ const PartnerLogin = () => {
     }
   };
 
+  // === PUBLIC REFERRAL LEAD ===
+  const handleRefLeadSubmit = async (e) => {
+    e.preventDefault();
+    if (!refLead.name || !refLead.phone) {
+      toast.error('Name and Phone are required');
+      return;
+    }
+    setRefLoading(true);
+    try {
+      await axios.post(`${API}/leads`, {
+        name: refLead.name,
+        phone: refLead.phone,
+        email: '',
+        project_type: refLead.requirement || 'general_inquiry',
+        location: refLead.location,
+        referral_code: refLead.referral_code,
+        source: 'partner_landing'
+      });
+      setRefSubmitted(true);
+      toast.success('Lead submitted successfully!');
+    } catch (err) {
+      toast.error('Failed to submit lead. Please try again.');
+    } finally {
+      setRefLoading(false);
+    }
+  };
+
+
   const benefits = [
-    { icon: IndianRupee, title: 'Earn 2% Commission', desc: 'Earn on every successful project referral.' },
+    { icon: IndianRupee, title: 'Earn Up To 2% Commission', desc: 'Earn on every successful project referral.' },
     { icon: Users, title: 'Dedicated Support', desc: 'Personal account manager for your referrals.' },
     { icon: TrendingUp, title: 'Track Earnings', desc: 'Real-time dashboard for leads & payouts.' },
     { icon: Shield, title: 'Trusted Brand', desc: '25+ years of construction excellence.' },
@@ -301,7 +334,7 @@ const PartnerLogin = () => {
               {[
                 { step: '01', title: 'Register', desc: 'Sign up with your name, phone & create a password' },
                 { step: '02', title: 'Refer', desc: 'Share your unique referral code with homebuilders' },
-                { step: '03', title: 'Earn', desc: 'Get 2% commission when the project converts' },
+                { step: '03', title: 'Earn', desc: 'Get up to 2% commission when the project converts' },
               ].map((s) => (
                 <div key={s.step}>
                   <div className="w-14 h-14 bg-[#F97316] rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold text-white">
@@ -317,6 +350,105 @@ const PartnerLogin = () => {
                 View Referral Terms & Conditions
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* Public Lead Referral Form */}
+        <section className="py-16 bg-white" data-testid="partner-lead-form-section">
+          <div className="max-w-2xl mx-auto px-4">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#010822] mb-3">
+                Have a Client? Refer Now
+              </h2>
+              <p className="text-slate-500">
+                Submit a lead with your partner/referral code. Already a partner? <button onClick={() => setView('login')} className="text-[#2a4599] hover:underline font-semibold">Login</button> to track it.
+              </p>
+            </div>
+
+            {refSubmitted ? (
+              <div className="bg-white p-8 border border-green-200 rounded-sm text-center">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check size={28} className="text-green-600" />
+                </div>
+                <h3 className="text-xl font-bold text-[#010822] mb-2">Lead Submitted!</h3>
+                <p className="text-slate-600 mb-4">Our team will follow up with the client shortly.</p>
+                <Button onClick={() => { setRefSubmitted(false); setRefLead({ name: '', phone: '', location: '', requirement: '', referral_code: '' }); }} variant="outline">
+                  Submit Another Lead
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-white p-8 border border-slate-200 rounded-sm">
+                <form onSubmit={handleRefLeadSubmit} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-700">Client Name *</Label>
+                      <Input
+                        data-testid="ref-lead-name"
+                        placeholder="Client's full name"
+                        value={refLead.name}
+                        onChange={(e) => setRefLead({ ...refLead, name: e.target.value })}
+                        className="h-11 mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-700">Client Phone *</Label>
+                      <Input
+                        data-testid="ref-lead-phone"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={refLead.phone}
+                        onChange={(e) => setRefLead({ ...refLead, phone: e.target.value })}
+                        className="h-11 mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-slate-700">Location</Label>
+                      <Input
+                        data-testid="ref-lead-location"
+                        placeholder="e.g., Gachibowli, Hyderabad"
+                        value={refLead.location}
+                        onChange={(e) => setRefLead({ ...refLead, location: e.target.value })}
+                        className="h-11 mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-slate-700">Requirement</Label>
+                      <Input
+                        data-testid="ref-lead-requirement"
+                        placeholder="e.g., 3BHK Independent House"
+                        value={refLead.requirement}
+                        onChange={(e) => setRefLead({ ...refLead, requirement: e.target.value })}
+                        className="h-11 mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700">Your Partner / Referral Code</Label>
+                    <Input
+                      data-testid="ref-lead-code"
+                      placeholder="e.g., AGDEMO01"
+                      value={refLead.referral_code}
+                      onChange={(e) => setRefLead({ ...refLead, referral_code: e.target.value })}
+                      className="h-11 mt-1"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Enter your referral code so the lead is tagged to you</p>
+                  </div>
+                  <Button
+                    data-testid="ref-lead-submit"
+                    type="submit"
+                    disabled={refLoading}
+                    className="w-full h-12 bg-[#F97316] hover:bg-[#ea580c] text-white font-bold rounded-sm"
+                  >
+                    {refLoading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    ) : (
+                      <>Submit Lead<ArrowRight className="ml-2" size={18} /></>
+                    )}
+                  </Button>
+                </form>
+              </div>
+            )}
           </div>
         </section>
 
