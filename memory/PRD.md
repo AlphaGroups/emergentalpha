@@ -1,10 +1,11 @@
-# Alpha Groups Website - PRD
+# Alpha Groups PropTech Platform - PRD
 
 ## Original Problem Statement
-Build a CRO-optimized website for Alpha Groups, a Hyderabad-based turnkey construction firm with:
+Build a CRO-optimized PropTech platform for Alpha Groups, a Hyderabad-based turnkey construction firm with:
 - Service: Turnkey construction (End-to-end except approvals)
 - Scope: Independent homes, luxury villas, G+5 apartments, schools, residential interiors
 - Market Positioning: Professional, transparent, tech-forward
+- Packages: Classic / Select / Signature / Customize
 
 ## User Personas
 1. **Hyderabad Homeowner**: Looking to build independent house, concerned about delays & hidden costs
@@ -12,87 +13,99 @@ Build a CRO-optimized website for Alpha Groups, a Hyderabad-based turnkey constr
 3. **Property Developer**: Building G+5 apartments
 4. **Business Owner**: Schools or commercial construction
 5. **Interior Client**: Residential interior renovation
+6. **Referral Partner**: Earns commission by referring homebuilders
+7. **Vendor**: Professionals seeking project opportunities
 
-## Core Requirements (Static)
-- [x] Home page with high-conversion hero section
-- [x] Packages page with Basic/Premium/Luxury tiers
-- [x] Services page covering all 5 service types
-- [x] Cost Calculator with lead capture
-- [x] Contact form for inquiries
-- [x] Admin panel for lead management
-- [x] Comparison section (Alpha Groups vs Local Contractors)
-- [x] Trust signals with premium brands (Tata Steel, UltraTech, Asian Paints)
-- [x] Quality checkpoints section (400+ checks)
-- [x] Local SEO keywords in footer
+## Core Requirements
+- [x] Home page with high-conversion hero section & "Start Your Project" CTA
+- [x] Packages section on homepage (Classic/Select/Signature/Customize cards)
+- [x] Dedicated Packages page with detailed comparison table
+- [x] Cost Calculator with real-time estimation & lead capture
+- [x] Admin panel for leads, packages, partners, vendors, listings
+- [x] Partner Referral System with landing page, registration (mocked OTP), and dashboard
+- [x] Collaboration page for landowners with value generation models
+- [x] Sales listings page
+- [x] Vendor registration with optional company name & email
+- [x] 5-step transparent process (Requirement Collection → Estimation → Design → Construction → Handover)
+- [x] Card-based "Why Choose Us" storytelling section
 
-## What's Been Implemented (December 2025)
+## Architecture
+```
+/app/
+├── backend/
+│   ├── server.py (FastAPI + MongoDB)
+│   ├── requirements.txt
+│   └── .env
+├── frontend/
+│   └── src/
+│       ├── App.js
+│       ├── config/constants.js
+│       ├── context/ (AuthContext, PartnerAuthContext)
+│       ├── components/ (Navbar, Footer, AdminLayout, PartnerLayout)
+│       └── pages/ (Home, Calculator, Packages, Collaboration, Sales, Vendor, Partner, Admin)
+```
 
-### Frontend (React + Tailwind CSS)
-- **Home Page**: Hero section with pain-point headlines, trust badges, comparison table, process steps, quality guarantee, CTA sections
-- **Packages Page**: 3-tier pricing (Basic/Premium/Luxury), project type selector, material specifications, quality checkpoints
-- **Services Page**: 5 services (Houses, Villas, Apartments, Schools, Interiors) with features and scope
-- **Calculator Page**: 2-step wizard (project details → results + lead capture)
-- **Contact Page**: Contact form with Hyderabad location selector
-- **Admin Panel**: Login/Register, Dashboard with analytics, Leads management with status updates
+## Key API Endpoints
+- POST /api/quick-lead - Homepage lead capture
+- POST /api/calculate - Cost calculation (validates project_type & package_type)
+- GET /api/packages - 4 package configs + 16 features
+- POST /api/partner/register - Partner registration (mocked OTP)
+- POST /api/partner/verify-otp - Verify OTP (123456)
+- POST /api/vendors - Vendor registration (optional email/company)
+- POST /api/admin/login - Admin auth
 
-### Backend (FastAPI + MongoDB)
-- `/api/packages` - Package details with rates
-- `/api/calculate` - Cost calculation engine
-- `/api/leads` - Lead submission
-- `/api/quote-request` - Quote request from calculator
-- `/api/admin/login` - Admin authentication
-- `/api/admin/register` - Admin registration
-- `/api/admin/leads` - Leads CRUD
-- `/api/admin/analytics` - Dashboard analytics
-
-### Design
-- Brand colors: Dusk Blue (#2a4599), Dark Blue (#010822), Accent Orange (#F97316)
+## Design System
+- Brand Colors: Dusk Blue (#2a4599), Dark Blue (#010822), Orange (#F97316)
 - Typography: Montserrat
-- Professional, tech-forward aesthetic
+- Components: Shadcn UI + Tailwind CSS
 
-## Contact Information
+## Contact Info
 - Phone: +91 94928 82197
 - Email: alphagroups1997@gmail.com
 - Location: Hyderabad, Telangana
 
+## What's Been Implemented (April 2026)
+
+### Session 1 (Dec 2025)
+- Basic homepage, packages, services, calculator, contact, admin panel
+
+### Session 2 (Recent)
+- Partner portal, collaboration page, sales listings, vendor registration
+- Admin dashboard expanded (leads, packages, partners, listings, vendors)
+
+### Session 3 (Current - April 2026)
+- **P0 Fixed**: Cost Calculator - real-time frontend calculation (area × rate), validation for negatives/empty/large values
+- **P0 Fixed**: Navigation restructured to Home/Our Services/Collaboration/Sales/Partner
+- **P0 Fixed**: Hero CTA changed to "Start Your Project" → lead capture modal
+- **P0 Fixed**: Partner landing page + registration with mocked OTP (123456)
+- **P1 Done**: Packages moved to homepage as card layout with "Recommended" badge on Select
+- **P1 Done**: Process updated to exact 5 steps (Requirement Collection → Estimation & Agreement → Planning & Design → Construction → Handover & Warranty)
+- **P1 Done**: "Why Choose Us" redesigned from comparison table to card-based storytelling
+- **P1 Done**: Collaboration page enhanced with value generation models (Rental Income, Mixed-Use, Profit Share)
+- **P2 Done**: Vendor form - Company Name and Email made optional
+- **P2 Done**: Admin login link in footer (already existed)
+- **Backend Fix**: /api/calculate validates project_type and package_type against allowed values
+- **Backend Fix**: QuickLeadCreate model for homepage lead capture
+
 ## Prioritized Backlog
 
-### P0 - Complete
-- [x] Homepage with conversion elements
-- [x] Packages with pricing
-- [x] Cost calculator with lead capture
-- [x] Contact form
-- [x] Admin panel for leads
+### P0 - All Complete
 
 ### P1 - Recommended Next
-- [ ] Add more 3 hero headline variations (A/B testing ready)
-- [ ] Vastu Checklist interactive tool
-- [ ] Borewell depth vs Foundation guide
+- [ ] WhatsApp integration for instant chat
+- [ ] Email notifications for new leads
+- [ ] Real SMS OTP for partner registration (replace mock)
 - [ ] Testimonials carousel with real customer photos
 - [ ] Project portfolio gallery
 
 ### P2 - Future Enhancement
-- [ ] WhatsApp integration for instant chat
-- [ ] Email notifications for new leads
-- [ ] SMS alerts
 - [ ] Google Analytics integration
 - [ ] Blog/Content section for SEO
+- [ ] A/B testing for hero headlines
+- [ ] Vastu Checklist interactive tool
+- [ ] SMS alerts for lead status changes
 
-## Local SEO Keywords (Implemented)
-1. house construction in Hyderabad
-2. villa builders in Gachibowli
-3. turnkey construction Hyderabad
-4. residential builders Jubilee Hills
-5. construction company Kondapur
-6. building contractors Madhapur
-7. home builders Hitech City
-8. apartment builders Hyderabad
-9. construction services Telangana
-10. best builders in Hyderabad
-
-## Next Action Items
-1. Add testimonials with real project photos
-2. Create project portfolio gallery
-3. Implement WhatsApp chat widget
-4. Set up email notifications for leads
-5. Add more interactive tools (Vastu Checklist)
+## Testing Status
+- Iteration 1: Passed
+- Iteration 2: Passed
+- Iteration 3: Passed (100% backend 22/22, 100% frontend)
