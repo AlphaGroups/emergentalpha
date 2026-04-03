@@ -191,17 +191,18 @@ class AlphaGroupsAPITester:
 
     def test_admin_analytics(self):
         """Test admin analytics endpoint"""
-        if not self.token:
-            print("❌ No token available for analytics test")
+        if not self.admin_token:
+            print("❌ No admin token available for analytics test")
             return False
-        success, response = self.run_test("Admin Analytics", "GET", "admin/analytics", 200)
+        success, response = self.run_test("Admin Analytics", "GET", "admin/analytics", 200, token_type='admin')
         if success:
-            required_fields = ['total_leads', 'new_leads', 'contacted_leads', 'converted_leads']
-            for field in required_fields:
-                if field not in response:
-                    print(f"❌ Missing analytics field: {field}")
+            # Check for new analytics structure
+            required_sections = ['leads', 'sources', 'collaboration', 'vendors', 'partners', 'listings']
+            for section in required_sections:
+                if section not in response:
+                    print(f"❌ Missing analytics section: {section}")
                     return False
-            print(f"✅ Analytics: {response['total_leads']} total leads")
+            print(f"✅ Analytics: {response['leads']['total']} total leads, {response['partners']['total']} partners")
         return success
 
     def test_admin_leads(self):
