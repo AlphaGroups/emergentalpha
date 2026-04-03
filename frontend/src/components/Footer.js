@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, ArrowRight } from 'lucide-react';
-
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_7631421a-a6b0-45d2-a236-8129ee8a64ce/artifacts/ep212nvd_Alpha%20Logo.jpg';
+import { LOGO_URL } from '@/config/constants';
 
 const Footer = () => {
   const hyderabadAreas = [
@@ -14,8 +13,16 @@ const Footer = () => {
     { name: 'Independent Houses', path: '/services' },
     { name: 'Luxury Villas', path: '/services' },
     { name: 'G+5 Apartments', path: '/services' },
-    { name: 'School Construction', path: '/services' },
     { name: 'Residential Interiors', path: '/services' },
+    { name: 'Land Collaboration', path: '/collaboration' },
+  ];
+
+  const quickLinks = [
+    { name: 'Construction Packages', path: '/packages' },
+    { name: 'Cost Calculator', path: '/calculator' },
+    { name: 'Property Sales', path: '/sales' },
+    { name: 'Vendor Registration', path: '/vendor-registration' },
+    { name: 'Partner Program', path: '/partner/login' },
   ];
 
   const seoKeywords = [
@@ -41,7 +48,7 @@ const Footer = () => {
             <img 
               src={LOGO_URL} 
               alt="Alpha Groups" 
-              className="h-16 w-auto object-contain mb-6 bg-white p-2 rounded"
+              className="h-16 w-auto object-contain mb-6"
             />
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
               Hyderabad's trusted turnkey construction partner. We deliver quality homes 
@@ -89,6 +96,24 @@ const Footer = () => {
             </ul>
           </div>
 
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-lg font-bold mb-6">Quick Links</h3>
+            <ul className="space-y-3">
+              {quickLinks.map((link) => (
+                <li key={link.name}>
+                  <Link 
+                    to={link.path}
+                    className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
+                  >
+                    <ArrowRight size={14} />
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           {/* Service Areas */}
           <div>
             <h3 className="text-lg font-bold mb-6">Service Areas</h3>
@@ -102,33 +127,6 @@ const Footer = () => {
                 </span>
               ))}
             </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-lg font-bold mb-6">Quick Links</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/packages" className="text-slate-400 hover:text-white transition-colors text-sm">
-                  Construction Packages
-                </Link>
-              </li>
-              <li>
-                <Link to="/calculator" className="text-slate-400 hover:text-white transition-colors text-sm">
-                  Cost Calculator
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-slate-400 hover:text-white transition-colors text-sm">
-                  Request Quote
-                </Link>
-              </li>
-              <li>
-                <Link to="/admin/login" className="text-slate-400 hover:text-white transition-colors text-sm">
-                  Admin Portal
-                </Link>
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -157,9 +155,14 @@ const Footer = () => {
             <p className="text-slate-500 text-sm">
               © {new Date().getFullYear()} Alpha Groups. All rights reserved.
             </p>
-            <p className="text-slate-500 text-sm">
-              Built with transparency. Delivered with trust.
-            </p>
+            <div className="flex gap-6 text-sm">
+              <Link to="/referral-terms" className="text-slate-500 hover:text-white transition-colors">
+                Referral Terms
+              </Link>
+              <Link to="/admin/login" className="text-slate-500 hover:text-white transition-colors">
+                Admin
+              </Link>
+            </div>
           </div>
         </div>
       </div>
