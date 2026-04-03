@@ -184,10 +184,10 @@ class AlphaGroupsAPITester:
 
     def test_admin_profile(self):
         """Test admin profile endpoint"""
-        if not self.token:
-            print("❌ No token available for admin profile test")
+        if not self.admin_token:
+            print("❌ No admin token available for admin profile test")
             return False
-        return self.run_test("Admin Profile", "GET", "admin/me", 200)
+        return self.run_test("Admin Profile", "GET", "admin/me", 200, token_type='admin')[0]
 
     def test_admin_analytics(self):
         """Test admin analytics endpoint"""
