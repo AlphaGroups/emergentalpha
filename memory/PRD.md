@@ -7,28 +7,6 @@ Build a CRO-optimized PropTech platform for Alpha Groups, a Hyderabad-based turn
 - Market Positioning: Professional, transparent, tech-forward
 - Packages: Classic / Select / Signature / Customize
 
-## User Personas
-1. **Hyderabad Homeowner**: Looking to build independent house, concerned about delays & hidden costs
-2. **Villa Buyer**: Premium customer seeking luxury villa construction
-3. **Property Developer**: Building G+5 apartments
-4. **Business Owner**: Schools or commercial construction
-5. **Interior Client**: Residential interior renovation
-6. **Referral Partner**: Earns commission by referring homebuilders
-7. **Vendor**: Professionals seeking project opportunities
-
-## Core Requirements
-- [x] Home page with high-conversion hero section & "Start Your Project" CTA
-- [x] Packages section on homepage (Classic/Select/Signature/Customize cards)
-- [x] Dedicated Packages page with detailed comparison table
-- [x] Cost Calculator with real-time estimation & lead capture
-- [x] Admin panel for leads, packages, partners, vendors, listings
-- [x] Partner Referral System with landing page, registration (mocked OTP), and dashboard
-- [x] Collaboration page for landowners with value generation models
-- [x] Sales listings page
-- [x] Vendor registration with optional company name & email
-- [x] 5-step transparent process (Requirement Collection → Estimation → Design → Construction → Handover)
-- [x] Card-based "Why Choose Us" storytelling section
-
 ## Architecture
 ```
 /app/
@@ -39,7 +17,8 @@ Build a CRO-optimized PropTech platform for Alpha Groups, a Hyderabad-based turn
 ├── frontend/
 │   └── src/
 │       ├── App.js
-│       ├── config/constants.js
+│       ├── config/constants.js (VENDOR_CATEGORY_GROUPS, PACKAGE_TYPES, etc.)
+│       ├── utils/exportExcel.js
 │       ├── context/ (AuthContext, PartnerAuthContext)
 │       ├── components/ (Navbar, Footer, AdminLayout, PartnerLayout)
 │       └── pages/ (Home, Calculator, Packages, Collaboration, Sales, Vendor, Partner, Admin)
@@ -47,66 +26,70 @@ Build a CRO-optimized PropTech platform for Alpha Groups, a Hyderabad-based turn
 
 ## Key API Endpoints
 - POST /api/quick-lead - Homepage lead capture
-- POST /api/calculate - Cost calculation (validates project_type & package_type)
-- GET /api/packages - 4 package configs + 16 features
-- POST /api/partner/register - Partner registration (mocked OTP)
-- POST /api/partner/verify-otp - Verify OTP (123456)
-- POST /api/vendors - Vendor registration (optional email/company)
-- POST /api/admin/login - Admin auth
+- POST /api/leads - Public lead with referral_code support
+- POST /api/calculate - Cost calculation
+- GET /api/packages - 4 package configs + features
+- POST /api/partner/register, /api/partner/verify-otp - Registration with OTP
+- POST /api/partner/login - Phone + password login
+- POST /api/partner/login-otp, /api/partner/login-otp-verify - OTP login
+- POST /api/partner/reset-password, /api/partner/reset-password-confirm - Password reset
+- POST /api/vendors - Vendor registration (optional email/company/attachment)
+- POST /api/admin/materials - Upload marketing materials
+- GET /api/admin/partners-analytics - All partners lead analytics
+- GET /api/admin/partners/{id}/analytics - Individual partner analytics
+- POST /api/admin/packages/features/reorder - Reorder features
 
-## Design System
-- Brand Colors: Dusk Blue (#2a4599), Dark Blue (#010822), Orange (#F97316)
-- Typography: Montserrat
-- Components: Shadcn UI + Tailwind CSS
-
-## Contact Info
-- Phone: +91 94928 82197
-- Email: alphagroups1997@gmail.com
-- Location: Hyderabad, Telangana
-
-## What's Been Implemented (April 2026)
+## What's Been Implemented
 
 ### Session 1 (Dec 2025)
 - Basic homepage, packages, services, calculator, contact, admin panel
 
-### Session 2 (Recent)
+### Session 2
 - Partner portal, collaboration page, sales listings, vendor registration
-- Admin dashboard expanded (leads, packages, partners, listings, vendors)
+- Admin dashboard expanded
 
-### Session 3 (Current - April 2026)
-- **P0 Fixed**: Cost Calculator - real-time frontend calculation (area × rate), validation for negatives/empty/large values
-- **P0 Fixed**: Navigation restructured to Home/Our Services/Collaboration/Sales (Partner removed from nav, kept in footer)
-- **P0 Fixed**: Hero CTA changed to "Start Your Project" → lead capture modal
-- **P0 Fixed**: Partner system overhaul: registration with password, login with phone+password or phone+OTP, forgot password with OTP reset, email optional
-- **P0 Fixed**: ScrollToTop on route change (footer links now scroll to top)
-- **P1 Done**: Packages moved to homepage as card layout with "Recommended" badge on Select
-- **P1 Done**: Process updated to exact 5 steps (Requirement Collection → Estimation & Agreement → Planning & Design → Construction → Handover & Warranty)
-- **P1 Done**: "Why Choose Us" redesigned from comparison table to card-based storytelling
-- **P1 Done**: Collaboration page enhanced with value generation models (Rental Income, Mixed-Use, Profit Share)
-- **P2 Done**: Vendor form - Company Name and Email made optional
-- **P2 Done**: Admin login link in footer (already existed)
-- **Backend Fix**: /api/calculate validates project_type and package_type against allowed values
-- **Backend Fix**: QuickLeadCreate model for homepage lead capture
+### Session 3 (April 2026)
+- Cost Calculator fixed (real-time frontend calculation)
+- Navigation restructured (Home/Our Services/Collaboration/Sales)
+- Hero CTA "Start Your Project" with lead capture modal
+- Packages moved to homepage (card layout, "Recommended" badge)
+- 5-step process (Requirement Collection → Estimation → Design → Construction → Handover)
+- Card-based "Why Choose Us"
+- Collaboration page: value generation models
+
+### Session 4 (April 2026)
+- Partner system overhaul: phone-based login, OTP login, password reset, registration with password
+- Partner removed from main nav (footer only), ScrollToTop
+- Demo credentials on Admin + Partner login pages
+- Admin sidebar: Materials tab added
+
+### Session 5 (April 2026) — Current
+- **Partner Add Lead**: New page (/partner/add-lead) for partners to submit leads with auto-tagged referral_code
+- **Public Lead Form**: On partner landing page with referral code field
+- **Commission text**: Changed "Earn 2%" to "Earn Up To 2%" everywhere
+- **Vendor file upload**: Optional attachment (PDF/image, 5MB max) for brochure/visiting card
+- **Vendor categories**: Comprehensive grouped list (7 groups, 50+ categories with collapsible sections)
+- **Admin Export**: Excel export for Leads, Partners, Vendors tabs
+- **Admin Feature Reorder**: Up/down arrows to reorder package features
+- **Admin Materials**: Upload marketing materials with WhatsApp share to partners
+- **Admin Partner Analytics**: Per-partner lead breakdown (Total/New/Contacted/Converted/Lost + conversion rate)
 
 ## Prioritized Backlog
 
-### P0 - All Complete
-
 ### P1 - Recommended Next
-- [ ] WhatsApp integration for instant chat
-- [ ] Email notifications for new leads
-- [ ] Real SMS OTP for partner registration (replace mock)
+- [ ] Integrate real SMS provider (Twilio) for OTP
+- [ ] WhatsApp Business API for automated material distribution
 - [ ] Testimonials carousel with real customer photos
 - [ ] Project portfolio gallery
+- [ ] Admin category management (add/edit vendor categories dynamically)
 
 ### P2 - Future Enhancement
 - [ ] Google Analytics integration
 - [ ] Blog/Content section for SEO
+- [ ] Email notifications for new leads
 - [ ] A/B testing for hero headlines
 - [ ] Vastu Checklist interactive tool
-- [ ] SMS alerts for lead status changes
 
 ## Testing Status
-- Iteration 1: Passed
-- Iteration 2: Passed
-- Iteration 3: Passed (100% backend 22/22, 100% frontend)
+- Iteration 1-5: All Passed
+- Iteration 6: Passed (100% backend 14/14, 100% frontend)

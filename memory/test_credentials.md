@@ -8,6 +8,7 @@
 ## Partner (Demo)
 - Phone: 9876543210
 - Password: partner123
+- Referral Code: AGDEMO01
 - Login URL: /partner/login
 
 ## Partner OTP (Mocked)
