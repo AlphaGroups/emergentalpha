@@ -7,11 +7,14 @@ class AlphaGroupsAPITester:
     def __init__(self, base_url="https://alpha-groups-build.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
-        self.token = None
+        self.admin_token = None
+        self.partner_token = None
         self.tests_run = 0
         self.tests_passed = 0
         self.admin_email = f"test_admin_{datetime.now().strftime('%H%M%S')}@test.com"
         self.admin_password = "TestPass123!"
+        self.partner_email = f"test_partner_{datetime.now().strftime('%H%M%S')}@test.com"
+        self.partner_password = "PartnerPass123!"
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
