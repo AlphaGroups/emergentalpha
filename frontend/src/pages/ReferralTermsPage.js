@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { FileText } from 'lucide-react';
 import axios from 'axios';
 import { API } from '@/config/constants';
-import ReactMarkdown from 'react-markdown';
 
 const ReferralTermsPage = () => {
   const [terms, setTerms] = useState(null);
