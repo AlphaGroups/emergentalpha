@@ -175,9 +175,9 @@ class AlphaGroupsAPITester:
             "email": self.admin_email,
             "password": self.admin_password
         }
-        success, response = self.run_test("Admin Login", "POST", "admin/login", 200, test_data)
+        success, response = self.run_test("Admin Login", "POST", "admin/login", 200, test_data, token_type=None)
         if success and 'token' in response:
-            self.token = response['token']
+            self.admin_token = response['token']
             print(f"✅ Admin login successful")
             return True
         return False
