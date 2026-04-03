@@ -1,9 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { Menu, X, Phone, Mail } from 'lucide-react';
+import { Menu, X, Phone, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_7631421a-a6b0-45d2-a236-8129ee8a64ce/artifacts/ep212nvd_Alpha%20Logo.jpg';
+import { LOGO_URL } from '@/config/constants';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,9 +11,8 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Packages', path: '/packages' },
-    { name: 'Services', path: '/services' },
-    { name: 'Calculator', path: '/calculator' },
-    { name: 'Contact', path: '/contact' },
+    { name: 'Collaboration', path: '/collaboration' },
+    { name: 'Sales', path: '/sales' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -34,9 +32,13 @@ const Navbar = () => {
               <span>alphagroups1997@gmail.com</span>
             </a>
           </div>
-          <div className="text-slate-400 text-xs">
-            Hyderabad's Trusted Turnkey Construction Partner
-          </div>
+          <Link 
+            to="/partner/login" 
+            className="flex items-center gap-2 text-slate-300 hover:text-orange-400 transition-colors"
+          >
+            <User size={14} />
+            <span className="hidden sm:inline">Partner Login</span>
+          </Link>
         </div>
       </div>
 
@@ -113,6 +115,13 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+              <Link 
+                to="/partner/login" 
+                className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded"
+                onClick={() => setIsOpen(false)}
+              >
+                Partner Login
+              </Link>
               <Link to="/calculator" onClick={() => setIsOpen(false)}>
                 <Button 
                   data-testid="mobile-cta"
