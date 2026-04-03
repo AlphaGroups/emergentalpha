@@ -179,6 +179,67 @@ const CollaborationPage = () => {
         </div>
       </section>
 
+      {/* Value Generation Models */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-[#010822] mb-4">
+              Generate Income From Your Land
+            </h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">
+              We help you unlock the earning potential of your land through proven development models.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gradient-to-br from-[#2a4599]/5 to-white p-8 border border-[#2a4599]/20 rounded-sm">
+              <div className="w-12 h-12 bg-[#2a4599]/10 rounded-sm flex items-center justify-center mb-4">
+                <Building2 className="text-[#2a4599]" size={24} />
+              </div>
+              <h4 className="text-lg font-bold text-[#010822] mb-3">Rental Income Model</h4>
+              <p className="text-slate-600 text-sm mb-4">
+                We build rental-ready apartments on your land. Earn consistent monthly rental income 
+                while the property appreciates in value.
+              </p>
+              <div className="bg-white p-3 rounded border border-slate-100">
+                <div className="text-xs text-slate-500">Potential Returns</div>
+                <div className="text-lg font-bold text-[#2a4599]">8-12% Annual Yield</div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#F97316]/5 to-white p-8 border border-[#F97316]/20 rounded-sm">
+              <div className="w-12 h-12 bg-[#F97316]/10 rounded-sm flex items-center justify-center mb-4">
+                <TrendingUp className="text-[#F97316]" size={24} />
+              </div>
+              <h4 className="text-lg font-bold text-[#010822] mb-3">Mixed-Use Development</h4>
+              <p className="text-slate-600 text-sm mb-4">
+                Combine commercial and residential spaces for maximum ROI. Ground floor shops + upper 
+                floor apartments for diversified income.
+              </p>
+              <div className="bg-white p-3 rounded border border-slate-100">
+                <div className="text-xs text-slate-500">Potential Returns</div>
+                <div className="text-lg font-bold text-[#F97316]">15-25% ROI</div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500/5 to-white p-8 border border-green-500/20 rounded-sm">
+              <div className="w-12 h-12 bg-green-500/10 rounded-sm flex items-center justify-center mb-4">
+                <Handshake className="text-green-600" size={24} />
+              </div>
+              <h4 className="text-lg font-bold text-[#010822] mb-3">Sale & Profit Share</h4>
+              <p className="text-slate-600 text-sm mb-4">
+                We build and sell completed units. You receive your agreed share of the sale proceeds 
+                with zero construction investment.
+              </p>
+              <div className="bg-white p-3 rounded border border-slate-100">
+                <div className="text-xs text-slate-500">Potential Returns</div>
+                <div className="text-lg font-bold text-green-600">40-60% of Profits</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Collaboration Types */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -19,6 +19,12 @@ import string
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
@@ -38,7 +44,7 @@ api_router = APIRouter(prefix="/api")
 class LeadCreate(BaseModel):
     name: str
     phone: str
-    email: EmailStr
+    email: Optional[str] = ""
     project_type: str
     plot_area: Optional[float] = None
     location: Optional[str] = None
@@ -219,9 +225,9 @@ class Vendor(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     vendor_id: str = Field(default_factory=lambda: f"VND{random.randint(10000, 99999)}")
     name: str
-    company_name: str
+    company_name: Optional[str] = ""
     phone: str
-    email: EmailStr
+    email: Optional[str] = ""
     website: Optional[str] = None
     categories: List[str] = []
     description: Optional[str] = None
@@ -231,9 +237,9 @@ class Vendor(BaseModel):
 
 class VendorCreate(BaseModel):
     name: str
-    company_name: str
+    company_name: Optional[str] = ""
     phone: str
-    email: EmailStr
+    email: Optional[str] = ""
     website: Optional[str] = None
     categories: List[str] = []
     description: Optional[str] = None
@@ -247,6 +253,22 @@ class MarketingMaterial(BaseModel):
     file_url: str
     file_type: str
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class QuickLeadCreate(BaseModel):
+    name: str
+    phone: str
+    location: Optional[str] = ""
+    requirement: Optional[str] = ""
+
+# Partner Registration Models
+class PartnerRegister(BaseModel):
+    name: str
+    phone: str
+    email: EmailStr
+
+class PartnerOTPVerify(BaseModel):
+    phone: str
+    otp: str
 
 # Admin Models
 class AdminLogin(BaseModel):
@@ -430,10 +452,19 @@ async def get_packages():
         "features": features
     }
 
+VALID_PROJECT_TYPES = ["independent_house", "villa", "apartment", "school", "interior"]
+VALID_PACKAGE_TYPES = ["classic", "select", "signature", "customize"]
+
 @api_router.post("/calculate", response_model=CalculatorResult)
 async def calculate_cost(calc_input: CalculatorInput):
     """Calculate construction cost based on package"""
+    if calc_input.project_type.lower() not in VALID_PROJECT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid project type. Must be one of: {', '.join(VALID_PROJECT_TYPES)}")
+    
     package_name = calc_input.package_type.lower()
+    if package_name not in VALID_PACKAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid package type. Must be one of: {', '.join(VALID_PACKAGE_TYPES)}")
+    
     config = await db.package_configs.find_one({"name": package_name}, {"_id": 0})
     
     if not config:
@@ -556,6 +587,77 @@ async def get_referral_terms():
     return terms
 
 # ===================== PARTNER AUTH =====================
+
+# In-memory OTP store (mocked)
+otp_store = {}
+
+@api_router.post("/partner/register")
+async def partner_register(data: PartnerRegister):
+    """Register new partner - sends mocked OTP"""
+    existing = await db.partners.find_one({"$or": [{"email": data.email}, {"phone": data.phone}]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone or email already registered")
+    
+    # Generate mock OTP (always 123456 for testing)
+    otp = "123456"
+    otp_store[data.phone] = {"otp": otp, "data": data.model_dump(), "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
+    
+    logger.info(f"[MOCK OTP] Sent OTP {otp} to {data.phone}")
+    return {"message": "OTP sent to your phone number", "mock_otp": otp}
+
+@api_router.post("/partner/verify-otp")
+async def partner_verify_otp(verify: PartnerOTPVerify):
+    """Verify OTP and create partner account"""
+    stored = otp_store.get(verify.phone)
+    if not stored:
+        raise HTTPException(status_code=400, detail="No OTP found. Please register again.")
+    
+    if stored["otp"] != verify.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+    if datetime.now(timezone.utc) > stored["expires"]:
+        del otp_store[verify.phone]
+        raise HTTPException(status_code=400, detail="OTP expired. Please register again.")
+    
+    reg_data = stored["data"]
+    
+    # Create partner with pending approval status
+    partner = Partner(
+        name=reg_data["name"],
+        email=reg_data["email"],
+        phone=reg_data["phone"],
+        password=hash_password(reg_data["phone"][-4:] + "alpha"),  # Default password
+        referral_code=generate_referral_code(),
+        is_active=False  # Requires admin approval
+    )
+    
+    await db.partners.insert_one(partner.model_dump())
+    del otp_store[verify.phone]
+    
+    return {
+        "message": "Registration successful! Your account is pending admin approval.",
+        "partner_id": partner.id,
+        "referral_code": partner.referral_code
+    }
+
+# Quick lead capture endpoint (for homepage CTA)
+@api_router.post("/quick-lead")
+async def create_quick_lead(data: QuickLeadCreate):
+    """Quick lead capture from homepage CTA"""
+    if not data.name or not data.phone:
+        raise HTTPException(status_code=400, detail="Name and phone are required")
+    
+    lead = Lead(
+        name=data.name,
+        phone=data.phone,
+        email="",
+        project_type=data.requirement or "general_inquiry",
+        location=data.location,
+        source="homepage_cta"
+    )
+    doc = lead.model_dump()
+    await db.leads.insert_one(doc)
+    return {"message": "Thank you! We'll call you back shortly.", "lead_id": lead.id}
 
 @api_router.post("/partner/login")
 async def partner_login(creds: PartnerLogin):
@@ -1006,12 +1108,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

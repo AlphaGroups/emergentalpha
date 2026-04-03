@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,8 +21,8 @@ const CalculatorPage = () => {
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [packageConfigs, setPackageConfigs] = useState([]);
 
   const [formData, setFormData] = useState({
     plotArea: searchParams.get('area') || '',
@@ -35,6 +35,18 @@ const CalculatorPage = () => {
     message: ''
   });
 
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const res = await axios.get(`${API}/packages`);
+        setPackageConfigs(res.data.configs || []);
+      } catch (e) {
+        console.error('Failed to fetch packages');
+      }
+    };
+    fetchPackages();
+  }, []);
+
   const projectTypes = [
     { value: 'independent_house', label: 'Independent House' },
     { value: 'villa', label: 'Luxury Villa' },
@@ -44,9 +56,10 @@ const CalculatorPage = () => {
   ];
 
   const packages = [
-    { value: 'basic', label: 'Basic', desc: 'Standard quality materials' },
-    { value: 'premium', label: 'Premium', desc: 'Enhanced specifications' },
-    { value: 'luxury', label: 'Luxury', desc: 'Top-tier materials' },
+    { value: 'classic', label: 'Classic', desc: 'Essential quality' },
+    { value: 'select', label: 'Select', desc: 'Enhanced specs', recommended: true },
+    { value: 'signature', label: 'Signature', desc: 'Premium luxury' },
+    { value: 'customize', label: 'Customize', desc: 'Tailored to you' },
   ];
 
   const hyderabadLocations = [
@@ -55,27 +68,46 @@ const CalculatorPage = () => {
     'Kukatpally', 'Manikonda', 'Puppalaguda', 'Financial District', 'Other'
   ];
 
-  const calculateCost = async () => {
-    if (!formData.plotArea || !formData.projectType || !formData.packageType) {
-      toast.error('Please fill all fields');
+  // Real-time calculation
+  const liveEstimate = useMemo(() => {
+    const area = parseFloat(formData.plotArea);
+    if (!area || area <= 0 || !formData.packageType) return null;
+    
+    const config = packageConfigs.find(c => c.name === formData.packageType);
+    if (!config) return null;
+    
+    let rate = config.price_per_sft;
+    if (rate === 0) rate = 2299; // Customize uses average
+    
+    const estimated = area * rate;
+    return {
+      plot_area: area,
+      base_rate: rate,
+      package_type: formData.packageType,
+      estimated_cost: estimated,
+      min_estimate: estimated * 0.95,
+      max_estimate: estimated * 1.10
+    };
+  }, [formData.plotArea, formData.packageType, packageConfigs]);
+
+  const handleCalculate = () => {
+    if (!formData.plotArea || parseFloat(formData.plotArea) <= 0) {
+      toast.error('Please enter a valid plot area (greater than 0)');
       return;
     }
-
-    setLoading(true);
-    try {
-      const response = await axios.post(`${API}/calculate`, {
-        plot_area: parseFloat(formData.plotArea),
-        project_type: formData.projectType,
-        package_type: formData.packageType
-      });
-      setResult(response.data);
-      setStep(2);
-    } catch (error) {
-      toast.error('Calculation failed. Please try again.');
-      console.error(error);
-    } finally {
-      setLoading(false);
+    if (parseFloat(formData.plotArea) > 100000) {
+      toast.error('Plot area seems too large. Please enter a valid value.');
+      return;
     }
+    if (!formData.projectType) {
+      toast.error('Please select a project type');
+      return;
+    }
+    if (!formData.packageType) {
+      toast.error('Please select a construction package');
+      return;
+    }
+    setStep(2);
   };
 
   const submitQuote = async () => {
@@ -94,7 +126,7 @@ const CalculatorPage = () => {
         plot_area: parseFloat(formData.plotArea),
         package_type: formData.packageType,
         location: formData.location,
-        estimated_cost: result.estimated_cost,
+        estimated_cost: liveEstimate.estimated_cost,
         message: formData.message
       });
       setSubmitted(true);
@@ -126,7 +158,7 @@ const CalculatorPage = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="text-left">
                   <div className="text-slate-500">Project Type</div>
-                  <div className="font-semibold text-[#010822]">{formData.projectType}</div>
+                  <div className="font-semibold text-[#010822] capitalize">{formData.projectType.replace('_', ' ')}</div>
                 </div>
                 <div className="text-left">
                   <div className="text-slate-500">Plot Area</div>
@@ -139,7 +171,7 @@ const CalculatorPage = () => {
                 <div className="text-left">
                   <div className="text-slate-500">Estimated Cost</div>
                   <div className="font-semibold text-[#2a4599]">
-                    ₹{result?.estimated_cost?.toLocaleString()}
+                    &#8377;{liveEstimate?.estimated_cost?.toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -168,7 +200,7 @@ const CalculatorPage = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
             Estimate Your Construction Cost
           </h1>
-          <p className="text-slate-300 text-lg max-w-2xl mx-auto">
+          <p className="text-slate-300 text-base md:text-lg max-w-2xl mx-auto">
             Get an instant estimate in 30 seconds. No hidden costs, complete transparency.
           </p>
         </div>
@@ -212,11 +244,21 @@ const CalculatorPage = () => {
                   <Input
                     data-testid="input-plot-area"
                     type="number"
+                    min="1"
+                    max="100000"
                     placeholder="e.g., 2400"
                     value={formData.plotArea}
-                    onChange={(e) => setFormData({ ...formData, plotArea: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || (parseFloat(val) >= 0 && parseFloat(val) <= 100000)) {
+                        setFormData({ ...formData, plotArea: val });
+                      }
+                    }}
                     className="h-14 text-lg border-slate-200 focus:border-[#2a4599]"
                   />
+                  {formData.plotArea && parseFloat(formData.plotArea) <= 0 && (
+                    <p className="text-red-500 text-xs mt-1">Plot area must be greater than 0</p>
+                  )}
                 </div>
 
                 {/* Project Type */}
@@ -246,68 +288,86 @@ const CalculatorPage = () => {
                   <Label className="text-sm font-semibold text-slate-700 mb-3 block">
                     Construction Package *
                   </Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    {packages.map((pkg) => (
-                      <button
-                        key={pkg.value}
-                        data-testid={`package-${pkg.value}`}
-                        onClick={() => setFormData({ ...formData, packageType: pkg.value })}
-                        className={`p-4 border-2 rounded-sm text-center transition-all ${
-                          formData.packageType === pkg.value
-                            ? 'border-[#2a4599] bg-[#2a4599]/5'
-                            : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="font-bold text-[#010822]">{pkg.label}</div>
-                        <div className="text-xs text-slate-500 mt-1">{pkg.desc}</div>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {packages.map((pkg) => {
+                      const config = packageConfigs.find(c => c.name === pkg.value);
+                      return (
+                        <button
+                          key={pkg.value}
+                          data-testid={`package-${pkg.value}`}
+                          onClick={() => setFormData({ ...formData, packageType: pkg.value })}
+                          className={`p-4 border-2 rounded-sm text-center transition-all relative ${
+                            formData.packageType === pkg.value
+                              ? 'border-[#2a4599] bg-[#2a4599]/5'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          {pkg.recommended && (
+                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F97316] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                              Popular
+                            </div>
+                          )}
+                          <div className="font-bold text-[#010822]">{pkg.label}</div>
+                          <div className="text-xs text-slate-500 mt-1">{pkg.desc}</div>
+                          {config && config.price_per_sft > 0 && (
+                            <div className="text-xs font-semibold text-[#2a4599] mt-1">&#8377;{config.price_per_sft.toLocaleString()}/sft</div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
+                {/* Live Estimate Preview */}
+                {liveEstimate && (
+                  <div data-testid="live-estimate" className="bg-[#2a4599]/5 border border-[#2a4599]/20 rounded-sm p-6 text-center">
+                    <div className="text-sm text-slate-500 mb-1">Estimated Cost</div>
+                    <div className="text-3xl font-bold text-[#2a4599]">
+                      &#8377;{liveEstimate.estimated_cost.toLocaleString('en-IN')}
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      {liveEstimate.plot_area.toLocaleString()} sq.ft x &#8377;{liveEstimate.base_rate.toLocaleString()}/sft
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   data-testid="calculate-btn"
-                  onClick={calculateCost}
+                  onClick={handleCalculate}
                   disabled={loading}
                   className="w-full h-14 bg-[#F97316] hover:bg-[#ea580c] text-white font-bold text-lg rounded-sm"
                 >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  ) : (
-                    <>
-                      Calculate Cost
-                      <ArrowRight className="ml-2" size={20} />
-                    </>
-                  )}
+                  Get Detailed Quote
+                  <ArrowRight className="ml-2" size={20} />
                 </Button>
               </div>
             )}
 
-            {step === 2 && result && (
+            {step === 2 && liveEstimate && (
               <div data-testid="calculator-step-2" className="space-y-8">
                 {/* Result Card */}
-                <div className="calculator-result p-8 rounded-sm">
+                <div className="calculator-result p-8 rounded-sm bg-gradient-to-br from-[#2a4599]/5 to-[#F97316]/5 border border-slate-200">
                   <div className="text-center mb-6">
                     <div className="text-sm text-slate-500 mb-2">Estimated Construction Cost</div>
-                    <div className="text-5xl font-bold text-[#2a4599]">
-                      ₹{result.estimated_cost.toLocaleString()}
+                    <div className="text-5xl font-bold text-[#2a4599]" data-testid="estimated-cost">
+                      &#8377;{liveEstimate.estimated_cost.toLocaleString('en-IN')}
                     </div>
                     <div className="text-sm text-slate-500 mt-2">
-                      Range: ₹{result.min_estimate.toLocaleString()} - ₹{result.max_estimate.toLocaleString()}
+                      Range: &#8377;{liveEstimate.min_estimate.toLocaleString('en-IN')} - &#8377;{liveEstimate.max_estimate.toLocaleString('en-IN')}
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-center pt-6 border-t border-slate-200">
                     <div>
                       <div className="text-slate-500 text-xs">Plot Area</div>
-                      <div className="font-semibold">{result.plot_area} sq.ft</div>
+                      <div className="font-semibold">{liveEstimate.plot_area.toLocaleString()} sq.ft</div>
                     </div>
                     <div>
                       <div className="text-slate-500 text-xs">Rate</div>
-                      <div className="font-semibold">₹{result.base_rate}/sq.ft</div>
+                      <div className="font-semibold">&#8377;{liveEstimate.base_rate.toLocaleString()}/sq.ft</div>
                     </div>
                     <div>
                       <div className="text-slate-500 text-xs">Package</div>
-                      <div className="font-semibold capitalize">{result.package_type}</div>
+                      <div className="font-semibold capitalize">{liveEstimate.package_type}</div>
                     </div>
                   </div>
                 </div>
@@ -408,10 +468,9 @@ const CalculatorPage = () => {
             )}
           </div>
 
-          {/* Trust Note */}
           <div className="text-center mt-8 text-sm text-slate-500">
-            <p>✓ No spam, we respect your privacy</p>
-            <p>✓ Free consultation with our experts</p>
+            <p>No spam, we respect your privacy</p>
+            <p>Free consultation with our experts</p>
           </div>
         </div>
       </section>

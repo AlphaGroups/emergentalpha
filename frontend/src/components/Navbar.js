@@ -10,12 +10,19 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Packages', path: '/packages' },
+    { name: 'Our Services', path: '/services' },
     { name: 'Collaboration', path: '/collaboration' },
     { name: 'Sales', path: '/sales' },
+    { name: 'Partner', path: '/partner/login' },
   ];
 
   const isActive = (path) => location.pathname === path;
+
+  const scrollToPackages = () => {
+    if (location.pathname === '/') {
+      document.getElementById('packages-section')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
     <>
@@ -33,11 +40,11 @@ const Navbar = () => {
             </a>
           </div>
           <Link 
-            to="/partner/login" 
+            to="/vendor-registration" 
             className="flex items-center gap-2 text-slate-300 hover:text-orange-400 transition-colors"
           >
             <User size={14} />
-            <span className="hidden sm:inline">Partner Login</span>
+            <span className="hidden sm:inline">Vendor Registration</span>
           </Link>
         </div>
       </div>
@@ -61,7 +68,7 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  data-testid={`nav-${link.name.toLowerCase()}`}
+                  data-testid={`nav-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                   className={`px-4 py-2 text-sm font-semibold transition-colors ${
                     isActive(link.path)
                       ? 'text-[#2a4599]'
@@ -104,7 +111,7 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  data-testid={`mobile-nav-${link.name.toLowerCase()}`}
+                  data-testid={`mobile-nav-${link.name.toLowerCase().replace(/\s+/g, '-')}`}
                   className={`block px-4 py-3 text-sm font-semibold rounded ${
                     isActive(link.path)
                       ? 'bg-[#2a4599]/10 text-[#2a4599]'
@@ -115,13 +122,6 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              <Link 
-                to="/partner/login" 
-                className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded"
-                onClick={() => setIsOpen(false)}
-              >
-                Partner Login
-              </Link>
               <Link to="/calculator" onClick={() => setIsOpen(false)}>
                 <Button 
                   data-testid="mobile-cta"
