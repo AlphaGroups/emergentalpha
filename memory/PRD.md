@@ -75,9 +75,10 @@ Build a CRO-optimized PropTech platform for Alpha Groups, a Hyderabad-based turn
 
 ### Session 3 (Current - April 2026)
 - **P0 Fixed**: Cost Calculator - real-time frontend calculation (area × rate), validation for negatives/empty/large values
-- **P0 Fixed**: Navigation restructured to Home/Our Services/Collaboration/Sales/Partner
+- **P0 Fixed**: Navigation restructured to Home/Our Services/Collaboration/Sales (Partner removed from nav, kept in footer)
 - **P0 Fixed**: Hero CTA changed to "Start Your Project" → lead capture modal
-- **P0 Fixed**: Partner landing page + registration with mocked OTP (123456)
+- **P0 Fixed**: Partner system overhaul: registration with password, login with phone+password or phone+OTP, forgot password with OTP reset, email optional
+- **P0 Fixed**: ScrollToTop on route change (footer links now scroll to top)
 - **P1 Done**: Packages moved to homepage as card layout with "Recommended" badge on Select
 - **P1 Done**: Process updated to exact 5 steps (Requirement Collection → Estimation & Agreement → Planning & Design → Construction → Handover & Warranty)
 - **P1 Done**: "Why Choose Us" redesigned from comparison table to card-based storytelling
