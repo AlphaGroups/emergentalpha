@@ -8,6 +8,7 @@ import {
   Building2, 
   Wrench, 
   FileText,
+  Upload,
   LogOut, 
   Menu, 
   X 
@@ -41,6 +42,7 @@ const AdminLayout = () => {
     { name: 'Listings', path: '/admin/listings', icon: Building2 },
     { name: 'Vendors', path: '/admin/vendors', icon: Wrench },
     { name: 'Collaboration', path: '/admin/collaboration', icon: Users },
+    { name: 'Materials', path: '/admin/materials', icon: Upload },
     { name: 'Terms', path: '/admin/terms', icon: FileText },
   ];
 

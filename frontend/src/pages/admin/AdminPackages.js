@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/config/constants';
@@ -106,6 +106,29 @@ const AdminPackages = () => {
       fetchPackages();
     } catch (error) {
       toast.error('Failed to delete feature');
+    }
+  };
+
+  const reorderFeature = async (featureId, direction) => {
+    const features = [...(packages.features || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const idx = features.findIndex(f => f.id === featureId);
+    if (idx === -1) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === features.length - 1) return;
+
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const tempOrder = features[idx].order ?? idx;
+    features[idx].order = features[swapIdx].order ?? swapIdx;
+    features[swapIdx].order = tempOrder;
+
+    try {
+      await axios.post(`${API}/admin/packages/features/reorder`, {
+        feature_orders: features.map((f, i) => ({ id: f.id, order: f.order ?? i }))
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Feature reordered');
+      fetchPackages();
+    } catch (error) {
+      toast.error('Failed to reorder');
     }
   };
 
@@ -244,6 +267,7 @@ const AdminPackages = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">Order</TableHead>
                   <TableHead>Feature</TableHead>
                   <TableHead>Classic</TableHead>
                   <TableHead>Select</TableHead>
@@ -253,10 +277,11 @@ const AdminPackages = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {packages.features.map((feature) => (
+                {[...packages.features].sort((a, b) => (a.order || 0) - (b.order || 0)).map((feature, idx) => (
                   <TableRow key={feature.id}>
                     {editingFeature === feature.id ? (
                       <>
+                        <TableCell className="text-center text-sm text-slate-400">{idx + 1}</TableCell>
                         <TableCell>
                           <Input
                             defaultValue={feature.name}
@@ -311,6 +336,27 @@ const AdminPackages = () => {
                       </>
                     ) : (
                       <>
+                        <TableCell>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <button
+                              data-testid={`reorder-up-${feature.id}`}
+                              onClick={() => reorderFeature(feature.id, 'up')}
+                              disabled={idx === 0}
+                              className={`p-0.5 rounded ${idx === 0 ? 'text-slate-200' : 'text-slate-500 hover:text-[#2a4599] hover:bg-[#2a4599]/5'}`}
+                            >
+                              <ArrowUp size={14} />
+                            </button>
+                            <span className="text-xs text-slate-400">{idx + 1}</span>
+                            <button
+                              data-testid={`reorder-down-${feature.id}`}
+                              onClick={() => reorderFeature(feature.id, 'down')}
+                              disabled={idx === packages.features.length - 1}
+                              className={`p-0.5 rounded ${idx === packages.features.length - 1 ? 'text-slate-200' : 'text-slate-500 hover:text-[#2a4599] hover:bg-[#2a4599]/5'}`}
+                            >
+                              <ArrowDown size={14} />
+                            </button>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-medium">{feature.name}</TableCell>
                         <TableCell className="text-sm">{feature.classic}</TableCell>
                         <TableCell className="text-sm">{feature.select}</TableCell>

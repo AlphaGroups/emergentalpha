@@ -25,6 +25,7 @@ import AdminListings from "@/pages/admin/AdminListings";
 import AdminVendors from "@/pages/admin/AdminVendors";
 import AdminCollaboration from "@/pages/admin/AdminCollaboration";
 import AdminTerms from "@/pages/admin/AdminTerms";
+import AdminMaterials from "@/pages/admin/AdminMaterials";
 
 // Partner Pages
 import PartnerLogin from "@/pages/partner/PartnerLogin";
@@ -82,6 +83,7 @@ function App() {
                 <Route path="vendors" element={<AdminVendors />} />
                 <Route path="collaboration" element={<AdminCollaboration />} />
                 <Route path="terms" element={<AdminTerms />} />
+                <Route path="materials" element={<AdminMaterials />} />
               </Route>
 
               {/* Partner Routes */}

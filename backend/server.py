@@ -1169,16 +1169,16 @@ async def get_materials(email: str = Depends(verify_admin_token)):
     return materials
 
 @api_router.post("/admin/materials")
-async def add_material(title: str, description: str, file_url: str, file_type: str, email: str = Depends(verify_admin_token)):
+async def add_material(data: dict, email: str = Depends(verify_admin_token)):
     """Add marketing material"""
     material = MarketingMaterial(
-        title=title,
-        description=description,
-        file_url=file_url,
-        file_type=file_type
+        title=data.get("title", ""),
+        description=data.get("description", ""),
+        file_url=data.get("file_url", ""),
+        file_type=data.get("file_type", "pdf")
     )
     await db.marketing_materials.insert_one(material.model_dump())
-    return material
+    return {"id": material.id, "message": "Material added successfully"}
 
 @api_router.delete("/admin/materials/{material_id}")
 async def delete_material(material_id: str, email: str = Depends(verify_admin_token)):
@@ -1187,6 +1187,95 @@ async def delete_material(material_id: str, email: str = Depends(verify_admin_to
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"message": "Material deleted"}
+
+# ===================== ADMIN - FEATURE REORDER =====================
+
+@api_router.post("/admin/packages/features/reorder")
+async def reorder_features(data: dict, email: str = Depends(verify_admin_token)):
+    """Reorder package features"""
+    feature_orders = data.get("feature_orders", [])  # [{id: "xxx", order: 1}, ...]
+    for item in feature_orders:
+        await db.package_features.update_one(
+            {"id": item["id"]},
+            {"$set": {"order": item["order"]}}
+        )
+    return {"message": "Features reordered successfully"}
+
+# ===================== ADMIN - PARTNER ANALYTICS =====================
+
+@api_router.get("/admin/partners/{partner_id}/analytics")
+async def get_partner_analytics(partner_id: str, email: str = Depends(verify_admin_token)):
+    """Get analytics for a specific partner"""
+    partner = await db.partners.find_one({"id": partner_id}, {"_id": 0, "password": 0})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    referral_code = partner.get("referral_code", "")
+    
+    # Get leads referred by this partner
+    all_leads = await db.leads.find(
+        {"referral_code": referral_code},
+        {"_id": 0}
+    ).to_list(200)
+    
+    total_leads = len(all_leads)
+    new_leads = sum(1 for l in all_leads if l.get("status") == "new")
+    contacted_leads = sum(1 for l in all_leads if l.get("status") == "contacted")
+    converted_leads = sum(1 for l in all_leads if l.get("status") == "converted")
+    lost_leads = sum(1 for l in all_leads if l.get("status") == "lost")
+    
+    return {
+        "partner": {
+            "id": partner["id"],
+            "name": partner["name"],
+            "phone": partner.get("phone", ""),
+            "email": partner.get("email", ""),
+            "referral_code": referral_code,
+            "is_active": partner.get("is_active", False),
+            "commission_percent": partner.get("commission_percent", 2),
+            "created_at": partner.get("created_at", "")
+        },
+        "leads": {
+            "total": total_leads,
+            "new": new_leads,
+            "contacted": contacted_leads,
+            "converted": converted_leads,
+            "lost": lost_leads,
+            "conversion_rate": round((converted_leads / total_leads * 100), 1) if total_leads > 0 else 0
+        },
+        "recent_leads": all_leads[:10]  # Last 10 leads
+    }
+
+@api_router.get("/admin/partners-analytics")
+async def get_all_partners_analytics(email: str = Depends(verify_admin_token)):
+    """Get analytics summary for all partners"""
+    partners = await db.partners.find({}, {"_id": 0, "password": 0}).to_list(200)
+    
+    result = []
+    for partner in partners:
+        referral_code = partner.get("referral_code", "")
+        leads = await db.leads.find({"referral_code": referral_code}, {"_id": 0}).to_list(200)
+        
+        total = len(leads)
+        converted = sum(1 for l in leads if l.get("status") == "converted")
+        
+        result.append({
+            "id": partner["id"],
+            "name": partner["name"],
+            "phone": partner.get("phone", ""),
+            "email": partner.get("email", ""),
+            "referral_code": referral_code,
+            "is_active": partner.get("is_active", False),
+            "commission_percent": partner.get("commission_percent", 2),
+            "total_leads": total,
+            "new_leads": sum(1 for l in leads if l.get("status") == "new"),
+            "contacted_leads": sum(1 for l in leads if l.get("status") == "contacted"),
+            "converted_leads": converted,
+            "lost_leads": sum(1 for l in leads if l.get("status") == "lost"),
+            "conversion_rate": round((converted / total * 100), 1) if total > 0 else 0
+        })
+    
+    return result
 
 # ===================== ADMIN - ANALYTICS =====================
 
