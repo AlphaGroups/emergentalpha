@@ -130,7 +130,7 @@ class AlphaGroupsAPITester:
             "location": "Gachibowli",
             "message": "Test lead creation"
         }
-        success, response = self.run_test("Create Lead", "POST", "leads", 200, test_data)
+        success, response = self.run_test("Create Lead", "POST", "leads", 200, test_data, token_type=None)
         if success and 'id' in response:
             print(f"✅ Lead created with ID: {response['id']}")
             return response['id']
