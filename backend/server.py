@@ -125,13 +125,13 @@ class PartnerCreate(BaseModel):
     commission_percent: float = 2.0
 
 class PartnerLogin(BaseModel):
-    email: str
+    phone: str
     password: str
 
 class Partner(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    email: str
+    email: Optional[str] = ""
     phone: str
     password: str
     referral_code: str
@@ -273,11 +273,27 @@ class QuickLeadCreate(BaseModel):
 class PartnerRegister(BaseModel):
     name: str
     phone: str
-    email: EmailStr
+    email: Optional[str] = ""
+    password: str
 
 class PartnerOTPVerify(BaseModel):
     phone: str
     otp: str
+
+class PartnerOTPLogin(BaseModel):
+    phone: str
+
+class PartnerOTPLoginVerify(BaseModel):
+    phone: str
+    otp: str
+
+class PartnerResetRequest(BaseModel):
+    phone: str
+
+class PartnerResetConfirm(BaseModel):
+    phone: str
+    otp: str
+    new_password: str
 
 # Admin Models
 class AdminLogin(BaseModel):
@@ -348,7 +364,7 @@ def verify_partner_token(credentials: HTTPAuthorizationCredentials = Depends(sec
     payload = verify_token(credentials)
     if payload.get("role") != "partner":
         raise HTTPException(status_code=403, detail="Partner access required")
-    return payload["sub"]
+    return payload["sub"]  # Returns phone number
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -603,9 +619,14 @@ otp_store = {}
 @api_router.post("/partner/register")
 async def partner_register(data: PartnerRegister):
     """Register new partner - sends mocked OTP"""
-    existing = await db.partners.find_one({"$or": [{"email": data.email}, {"phone": data.phone}]})
+    existing = await db.partners.find_one({"phone": data.phone})
     if existing:
-        raise HTTPException(status_code=400, detail="Phone or email already registered")
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+    
+    if data.email:
+        email_exists = await db.partners.find_one({"email": data.email})
+        if email_exists:
+            raise HTTPException(status_code=400, detail="Email already registered")
     
     # Generate mock OTP (always 123456 for testing)
     otp = "123456"
@@ -630,23 +651,30 @@ async def partner_verify_otp(verify: PartnerOTPVerify):
     
     reg_data = stored["data"]
     
-    # Create partner with pending approval status
+    # Create partner with the password they chose during registration
     partner = Partner(
         name=reg_data["name"],
-        email=reg_data["email"],
+        email=reg_data.get("email", ""),
         phone=reg_data["phone"],
-        password=hash_password(reg_data["phone"][-4:] + "alpha"),  # Default password
+        password=hash_password(reg_data["password"]),
         referral_code=generate_referral_code(),
-        is_active=False  # Requires admin approval
+        is_active=True
     )
     
     await db.partners.insert_one(partner.model_dump())
     del otp_store[verify.phone]
     
+    token = create_token(reg_data["phone"], role="partner")
     return {
-        "message": "Registration successful! Your account is pending admin approval.",
-        "partner_id": partner.id,
-        "referral_code": partner.referral_code
+        "message": "Registration successful! Welcome to Alpha Groups Partner Program.",
+        "token": token,
+        "partner": {
+            "id": partner.id,
+            "name": partner.name,
+            "email": partner.email,
+            "phone": partner.phone,
+            "referral_code": partner.referral_code
+        }
     }
 
 # Quick lead capture endpoint (for homepage CTA)
@@ -670,32 +698,111 @@ async def create_quick_lead(data: QuickLeadCreate):
 
 @api_router.post("/partner/login")
 async def partner_login(creds: PartnerLogin):
-    """Partner login"""
-    partner = await db.partners.find_one({"email": creds.email}, {"_id": 0})
+    """Partner login with phone + password"""
+    partner = await db.partners.find_one({"phone": creds.phone}, {"_id": 0})
     if not partner:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, partner["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not partner.get("is_active", True):
-        raise HTTPException(status_code=403, detail="Account deactivated")
+        raise HTTPException(status_code=403, detail="Account not yet activated. Please contact admin.")
     
-    token = create_token(creds.email, role="partner")
+    token = create_token(creds.phone, role="partner")
     return {
         "token": token,
         "partner": {
             "id": partner["id"],
             "name": partner["name"],
-            "email": partner["email"],
+            "email": partner.get("email", ""),
+            "phone": partner["phone"],
             "referral_code": partner["referral_code"]
         }
     }
 
+@api_router.post("/partner/login-otp")
+async def partner_login_otp_request(data: PartnerOTPLogin):
+    """Request OTP for login"""
+    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    if not partner:
+        raise HTTPException(status_code=404, detail="No account found with this phone number")
+    if not partner.get("is_active", True):
+        raise HTTPException(status_code=403, detail="Account not yet activated")
+    
+    otp = "123456"
+    otp_store[f"login_{data.phone}"] = {"otp": otp, "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
+    logger.info(f"[MOCK OTP] Login OTP {otp} sent to {data.phone}")
+    return {"message": "OTP sent to your phone number", "mock_otp": otp}
+
+@api_router.post("/partner/login-otp-verify")
+async def partner_login_otp_verify(data: PartnerOTPLoginVerify):
+    """Verify OTP and login"""
+    stored = otp_store.get(f"login_{data.phone}")
+    if not stored:
+        raise HTTPException(status_code=400, detail="No OTP found. Please request again.")
+    if stored["otp"] != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    if datetime.now(timezone.utc) > stored["expires"]:
+        del otp_store[f"login_{data.phone}"]
+        raise HTTPException(status_code=400, detail="OTP expired")
+    
+    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    del otp_store[f"login_{data.phone}"]
+    token = create_token(data.phone, role="partner")
+    return {
+        "token": token,
+        "partner": {
+            "id": partner["id"],
+            "name": partner["name"],
+            "email": partner.get("email", ""),
+            "phone": partner["phone"],
+            "referral_code": partner["referral_code"]
+        }
+    }
+
+@api_router.post("/partner/reset-password")
+async def partner_reset_request(data: PartnerResetRequest):
+    """Request password reset OTP"""
+    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    if not partner:
+        raise HTTPException(status_code=404, detail="No account found with this phone number")
+    
+    otp = "123456"
+    otp_store[f"reset_{data.phone}"] = {"otp": otp, "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
+    logger.info(f"[MOCK OTP] Reset OTP {otp} sent to {data.phone}")
+    return {"message": "OTP sent to your phone number", "mock_otp": otp}
+
+@api_router.post("/partner/reset-password-confirm")
+async def partner_reset_confirm(data: PartnerResetConfirm):
+    """Confirm password reset with OTP"""
+    stored = otp_store.get(f"reset_{data.phone}")
+    if not stored:
+        raise HTTPException(status_code=400, detail="No OTP found. Please request again.")
+    if stored["otp"] != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    if datetime.now(timezone.utc) > stored["expires"]:
+        del otp_store[f"reset_{data.phone}"]
+        raise HTTPException(status_code=400, detail="OTP expired")
+    
+    new_hash = hash_password(data.new_password)
+    result = await db.partners.update_one({"phone": data.phone}, {"$set": {"password": new_hash}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Partner not found")
+    
+    del otp_store[f"reset_{data.phone}"]
+    return {"message": "Password reset successful. You can now login with your new password."}
+
 # ===================== PARTNER DASHBOARD =====================
 
 @api_router.get("/partner/dashboard")
-async def get_partner_dashboard(email: str = Depends(verify_partner_token)):
+async def get_partner_dashboard(identifier: str = Depends(verify_partner_token)):
     """Get partner dashboard data"""
-    partner = await db.partners.find_one({"email": email}, {"_id": 0, "password": 0})
+    partner = await db.partners.find_one(
+        {"$or": [{"phone": identifier}, {"email": identifier}]},
+        {"_id": 0, "password": 0}
+    )
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -737,9 +844,12 @@ async def get_partner_dashboard(email: str = Depends(verify_partner_token)):
     }
 
 @api_router.get("/partner/leads")
-async def get_partner_leads(email: str = Depends(verify_partner_token)):
+async def get_partner_leads(identifier: str = Depends(verify_partner_token)):
     """Get partner's referred leads"""
-    partner = await db.partners.find_one({"email": email}, {"_id": 0})
+    partner = await db.partners.find_one(
+        {"$or": [{"phone": identifier}, {"email": identifier}]},
+        {"_id": 0}
+    )
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -751,7 +861,7 @@ async def get_partner_leads(email: str = Depends(verify_partner_token)):
     return leads
 
 @api_router.get("/partner/materials")
-async def get_partner_materials(email: str = Depends(verify_partner_token)):
+async def get_partner_materials(identifier: str = Depends(verify_partner_token)):
     """Get marketing materials for partner"""
     materials = await db.marketing_materials.find({}, {"_id": 0}).to_list(50)
     return materials

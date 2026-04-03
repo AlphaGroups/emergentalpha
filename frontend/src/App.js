@@ -1,5 +1,6 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 
 // Public Pages
@@ -41,12 +42,21 @@ import PartnerLayout from "@/components/PartnerLayout";
 import { AuthProvider } from "@/context/AuthContext";
 import { PartnerAuthProvider } from "@/context/PartnerAuthContext";
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
       <PartnerAuthProvider>
         <div className="App">
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<><Navbar /><HomePage /><Footer /></>} />
