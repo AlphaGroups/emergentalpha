@@ -99,9 +99,9 @@ class AlphaGroupsAPITester:
         test_data = {
             "plot_area": 2400,
             "project_type": "independent_house",
-            "package_type": "premium"
+            "package_type": "select"
         }
-        success, response = self.run_test("Calculate Cost", "POST", "calculate", 200, test_data)
+        success, response = self.run_test("Calculate Cost", "POST", "calculate", 200, test_data, token_type=None)
         if success:
             required_fields = ['plot_area', 'project_type', 'package_type', 'base_rate', 'estimated_cost']
             for field in required_fields:
