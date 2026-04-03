@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 
 const HERO_BG = 'https://images.unsplash.com/photo-1622015663319-e97e697503ee?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBsdXh1cnklMjB2aWxsYSUyMGV4dGVyaW9yJTIwYXJjaGl0ZWN0dXJlfGVufDB8fHx8MTc3MjUzOTI0OHww&ixlib=rb-4.1.0&q=85';
-const PROCESS_IMG = 'https://images.unsplash.com/photo-1765378025255-5c2ff04563f4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxjb25zdHJ1Y3Rpb24lMjBzaXRlJTIwZW5naW5lZXIlMjBibHVlcHJpbnQlMjBzYWZldHl8ZW58MHx8fHwxNzcyNTM5MjUyfDA&ixlib=rb-4.1.0&q=85';
 
 const HomePage = () => {
   const comparisonData = [
