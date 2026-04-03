@@ -218,12 +218,12 @@ class AlphaGroupsAPITester:
 
     def test_lead_update(self, lead_id):
         """Test lead status update"""
-        if not self.token or not lead_id:
-            print("❌ No token or lead ID available for update test")
+        if not self.admin_token or not lead_id:
+            print("❌ No admin token or lead ID available for update test")
             return False
         
         test_data = {"status": "contacted", "notes": "Test update"}
-        return self.run_test(f"Update Lead {lead_id}", "PATCH", f"admin/leads/{lead_id}", 200, test_data)
+        return self.run_test(f"Update Lead {lead_id}", "PATCH", f"admin/leads/{lead_id}", 200, test_data, token_type='admin')[0]
 
     def test_unauthorized_access(self):
         """Test unauthorized access to admin endpoints"""
