@@ -70,19 +70,28 @@ class AlphaGroupsAPITester:
         return self.run_test("API Root", "GET", "", 200)
 
     def test_packages_endpoint(self):
-        """Test packages endpoint"""
-        success, response = self.run_test("Get Packages", "GET", "packages", 200)
+        """Test packages endpoint - should return 4 package configs with features"""
+        success, response = self.run_test("Get Packages", "GET", "packages", 200, token_type=None)
         if success:
-            # Verify package structure
-            expected_packages = ['basic', 'premium', 'luxury']
+            # Verify new package structure with configs and features
+            if 'configs' not in response or 'features' not in response:
+                print(f"❌ Missing configs or features in response")
+                return False
+            
+            configs = response['configs']
+            features = response['features']
+            
+            # Check for 4 package types
+            expected_packages = ['classic', 'select', 'signature', 'customize']
+            found_packages = [config['name'] for config in configs]
+            
             for pkg in expected_packages:
-                if pkg not in response:
+                if pkg not in found_packages:
                     print(f"❌ Missing package: {pkg}")
                     return False
-                if 'rates' not in response[pkg]:
-                    print(f"❌ Missing rates in {pkg} package")
-                    return False
-            print("✅ Package structure validated")
+            
+            print(f"✅ Found {len(configs)} package configs and {len(features)} features")
+            return True
         return success
 
     def test_calculate_endpoint(self):
