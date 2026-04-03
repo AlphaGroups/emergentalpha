@@ -6,72 +6,62 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Copy, Check } from 'lucide-react';
+import { LOGO_URL, API } from '@/config/constants';
 
-const LOGO_URL = 'https://customer-assets.emergentagent.com/job_7631421a-a6b0-45d2-a236-8129ee8a64ce/artifacts/ep212nvd_Alpha%20Logo.jpg';
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const DEMO_CREDENTIALS = {
+  email: 'test@alpha.com',
+  password: 'password123'
+};
 
 const AdminLogin = () => {
-  const [isRegister, setIsRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: ''
-  });
+  const [copied, setCopied] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' });
 
   const { login, token } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
-    if (token) {
-      navigate('/admin/dashboard', { replace: true });
-    }
+    if (token) navigate('/admin/dashboard', { replace: true });
   }, [token, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.email || !formData.password || (isRegister && !formData.name)) {
+    if (!formData.email || !formData.password) {
       toast.error('Please fill all fields');
       return;
     }
-
     setLoading(true);
     try {
-      const endpoint = isRegister ? '/admin/register' : '/admin/login';
-      const payload = isRegister 
-        ? { name: formData.name, email: formData.email, password: formData.password }
-        : { email: formData.email, password: formData.password };
-
-      const response = await axios.post(`${API}${endpoint}`, payload);
-      
-      // Login will update context and trigger useEffect redirect
+      const response = await axios.post(`${API}/admin/login`, {
+        email: formData.email,
+        password: formData.password
+      });
       login(response.data.token, {
         email: response.data.email,
         name: response.data.name
       });
-      
-      toast.success(isRegister ? 'Account created successfully!' : 'Welcome back!');
+      toast.success('Welcome back!');
     } catch (error) {
-      const message = error.response?.data?.detail || 'Authentication failed';
-      toast.error(message);
+      toast.error(error.response?.data?.detail || 'Invalid credentials');
     } finally {
       setLoading(false);
     }
   };
 
+  const fillDemoCredentials = () => {
+    setFormData({ email: DEMO_CREDENTIALS.email, password: DEMO_CREDENTIALS.password });
+    setCopied(true);
+    toast.success('Demo credentials filled!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div data-testid="admin-login-page" className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Back to home */}
       <div className="p-4">
-        <Link 
-          to="/"
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-[#2a4599] transition-colors"
-        >
+        <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-[#2a4599] transition-colors">
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back to Website</span>
         </Link>
@@ -79,37 +69,36 @@ const AdminLogin = () => {
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
-          {/* Logo */}
           <div className="text-center mb-8">
-            <img 
-              src={LOGO_URL} 
-              alt="Alpha Groups" 
-              className="h-16 w-auto mx-auto mb-6"
-            />
-            <h1 className="text-2xl font-bold text-[#010822]">
-              {isRegister ? 'Create Admin Account' : 'Admin Portal'}
-            </h1>
-            <p className="text-slate-500 text-sm mt-2">
-              {isRegister ? 'Set up your admin credentials' : 'Sign in to manage leads and analytics'}
-            </p>
+            <img src={LOGO_URL} alt="Alpha Groups" className="h-16 w-auto mx-auto mb-6" />
+            <h1 className="text-2xl font-bold text-[#010822]">Admin Portal</h1>
+            <p className="text-slate-500 text-sm mt-2">Sign in to manage leads and analytics</p>
           </div>
 
-          {/* Form */}
+          {/* Demo Credentials Banner */}
+          <div 
+            data-testid="admin-demo-credentials"
+            className="bg-[#2a4599]/5 border border-[#2a4599]/20 rounded-sm p-4 mb-6"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-[#2a4599] uppercase tracking-wider">Demo Credentials</span>
+              <button
+                data-testid="admin-fill-demo-btn"
+                onClick={fillDemoCredentials}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F97316] hover:text-[#ea580c] transition-colors"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Filled!' : 'Use Demo'}
+              </button>
+            </div>
+            <div className="space-y-1 text-sm text-slate-600">
+              <div>Email: <span className="font-mono font-semibold text-[#010822]">{DEMO_CREDENTIALS.email}</span></div>
+              <div>Password: <span className="font-mono font-semibold text-[#010822]">{DEMO_CREDENTIALS.password}</span></div>
+            </div>
+          </div>
+
           <div className="bg-white p-8 border border-slate-200 rounded-sm shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {isRegister && (
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">Full Name</Label>
-                  <Input
-                    data-testid="admin-input-name"
-                    placeholder="Your name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="h-12 mt-1"
-                  />
-                </div>
-              )}
-
               <div>
                 <Label className="text-sm font-medium text-slate-700">Email</Label>
                 <Input
@@ -121,14 +110,13 @@ const AdminLogin = () => {
                   className="h-12 mt-1"
                 />
               </div>
-
               <div>
                 <Label className="text-sm font-medium text-slate-700">Password</Label>
                 <div className="relative">
                   <Input
                     data-testid="admin-input-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    placeholder="Enter password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="h-12 mt-1 pr-12"
@@ -142,7 +130,6 @@ const AdminLogin = () => {
                   </button>
                 </div>
               </div>
-
               <Button
                 data-testid="admin-submit-btn"
                 type="submit"
@@ -151,22 +138,9 @@ const AdminLogin = () => {
               >
                 {loading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                ) : (
-                  isRegister ? 'Create Account' : 'Sign In'
-                )}
+                ) : 'Sign In'}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <button
-                data-testid="admin-toggle-mode"
-                type="button"
-                onClick={() => setIsRegister(!isRegister)}
-                className="text-sm text-[#2a4599] hover:underline"
-              >
-                {isRegister ? 'Already have an account? Sign in' : 'Need an account? Register'}
-              </button>
-            </div>
           </div>
         </div>
       </div>

@@ -439,10 +439,50 @@ async def seed_referral_terms():
 
 # ===================== STARTUP EVENT =====================
 
+async def seed_demo_partner():
+    """Seed demo partner account"""
+    existing = await db.partners.find_one({"phone": "9876543210"})
+    if not existing:
+        demo_partner = Partner(
+            name="Demo Partner",
+            email="partner@alpha.com",
+            phone="9876543210",
+            password=hash_password("partner123"),
+            referral_code="AGDEMO01",
+            is_active=True
+        )
+        await db.partners.insert_one(demo_partner.model_dump())
+        logger.info("Demo partner seeded: phone=9876543210, password=partner123")
+
+async def seed_demo_admin():
+    """Seed demo admin account"""
+    existing = await db.admins.find_one({"email": "test@alpha.com"})
+    if not existing:
+        admin_doc = {
+            "id": str(uuid.uuid4()),
+            "name": "Alpha Admin",
+            "email": "test@alpha.com",
+            "password": hash_password("password123"),
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.admins.insert_one(admin_doc)
+        logger.info("Demo admin seeded: email=test@alpha.com, password=password123")
+    else:
+        # Ensure password is correct for demo
+        if not verify_password("password123", existing.get("password", "")):
+            await db.admins.update_one(
+                {"email": "test@alpha.com"},
+                {"$set": {"password": hash_password("password123")}}
+            )
+            logger.info("Demo admin password reset to: password123")
+
 @app.on_event("startup")
 async def startup_event():
     await seed_default_packages()
     await seed_referral_terms()
+    await seed_demo_partner()
+    await seed_demo_admin()
 
 # ===================== PUBLIC ROUTES =====================
 

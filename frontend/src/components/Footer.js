@@ -23,6 +23,7 @@ const Footer = () => {
     { name: 'Property Sales', path: '/sales' },
     { name: 'Vendor Registration', path: '/vendor-registration' },
     { name: 'Partner Program', path: '/partner/login' },
+    { name: 'Admin Portal', path: '/admin/login' },
   ];
 
   const seoKeywords = [

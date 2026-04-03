@@ -3,13 +3,15 @@
 ## Admin
 - Email: test@alpha.com
 - Password: password123
+- Login URL: /admin/login
 
-## Partner (Test Account)
-- Phone: 9876500001
-- Password: newpass123
+## Partner (Demo)
+- Phone: 9876543210
+- Password: partner123
+- Login URL: /partner/login
 
 ## Partner OTP (Mocked)
-- OTP Code: 123456 (always, for all OTP flows)
+- OTP Code: 123456 (always, for all OTP flows - registration, login, reset)
 
 ## App URL
 - Frontend: https://proptech-platform-10.preview.emergentagent.com
