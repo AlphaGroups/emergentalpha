@@ -24,9 +24,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, Trash2, Phone, Mail, MapPin } from 'lucide-react';
+import { Search, Eye, Trash2, Phone, Mail, MapPin, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { exportToExcel } from '@/utils/exportExcel';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -104,6 +105,28 @@ const AdminLeads = () => {
     return variants[status] || variants.new;
   };
 
+  const handleExport = () => {
+    const columns = [
+      { header: 'Name', key: 'name' },
+      { header: 'Phone', key: 'phone' },
+      { header: 'Email', key: 'email' },
+      { header: 'Project Type', key: 'project_type' },
+      { header: 'Plot Area', key: 'plot_area' },
+      { header: 'Location', key: 'location' },
+      { header: 'Budget', key: 'budget' },
+      { header: 'Status', key: 'status' },
+      { header: 'Source', key: 'source' },
+      { header: 'Referral Code', key: 'referral_code' },
+      { header: 'Message', key: 'message' },
+      { header: 'Date', key: 'created_at', transform: (v) => v ? new Date(v).toLocaleDateString() : '' },
+    ];
+    if (exportToExcel(filteredLeads, 'Leads', columns)) {
+      toast.success('Leads exported successfully');
+    } else {
+      toast.error('No data to export');
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -116,9 +139,20 @@ const AdminLeads = () => {
 
   return (
     <div data-testid="admin-leads" className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[#010822]">Leads</h1>
-        <p className="text-slate-500 mt-1">Manage and track your construction leads</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#010822]">Leads</h1>
+          <p className="text-slate-500 mt-1">Manage and track your construction leads</p>
+        </div>
+        <Button
+          data-testid="export-leads-btn"
+          onClick={handleExport}
+          variant="outline"
+          className="border-[#2a4599] text-[#2a4599] hover:bg-[#2a4599]/5"
+        >
+          <Download size={16} className="mr-2" />
+          Export Excel
+        </Button>
       </div>
 
       {/* Filters */}
