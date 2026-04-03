@@ -44,8 +44,8 @@ const VendorRegistrationPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.company_name || !formData.phone || !formData.email || formData.categories.length === 0) {
-      toast.error('Please fill all required fields and select at least one category');
+    if (!formData.name || !formData.phone || formData.categories.length === 0) {
+      toast.error('Please fill required fields and select at least one category');
       return;
     }
 
@@ -155,14 +155,13 @@ const VendorRegistrationPage = () => {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-slate-700">Company Name *</Label>
+                <Label className="text-sm font-medium text-slate-700">Company Name (Optional)</Label>
                 <Input
                   data-testid="vendor-company"
                   placeholder="Company name"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                   className="h-12 mt-1"
-                  required
                 />
               </div>
             </div>
@@ -180,7 +179,7 @@ const VendorRegistrationPage = () => {
                 />
               </div>
               <div>
-                <Label className="text-sm font-medium text-slate-700">Email *</Label>
+                <Label className="text-sm font-medium text-slate-700">Email (Optional)</Label>
                 <Input
                   data-testid="vendor-email"
                   type="email"
@@ -188,7 +187,6 @@ const VendorRegistrationPage = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="h-12 mt-1"
-                  required
                 />
               </div>
             </div>
