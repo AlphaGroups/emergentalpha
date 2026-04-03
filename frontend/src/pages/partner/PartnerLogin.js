@@ -8,15 +8,21 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { 
   ArrowLeft, Eye, EyeOff, ArrowRight, IndianRupee, 
-  Users, TrendingUp, Shield, Award, Phone, KeyRound
+  Users, TrendingUp, Shield, Award, Phone, KeyRound, Copy, Check
 } from 'lucide-react';
 import { LOGO_URL, API } from '@/config/constants';
+
+const DEMO_PARTNER = {
+  phone: '9876543210',
+  password: 'partner123'
+};
 
 const PartnerLogin = () => {
   // Views: landing | login | login-otp | register | verify-reg | reset | reset-confirm
   const [view, setView] = useState('landing');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Login with password
   const [loginData, setLoginData] = useState({ phone: '', password: '' });
@@ -38,6 +44,13 @@ const PartnerLogin = () => {
   useEffect(() => {
     if (token) navigate('/partner/dashboard', { replace: true });
   }, [token, navigate]);
+
+  const fillDemoCredentials = () => {
+    setLoginData({ phone: DEMO_PARTNER.phone, password: DEMO_PARTNER.password });
+    setCopied(true);
+    toast.success('Demo credentials filled!');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // === LOGIN WITH PASSWORD ===
   const handlePasswordLogin = async (e) => {
@@ -335,6 +348,29 @@ const PartnerLogin = () => {
               <h1 className="text-2xl font-bold text-[#010822]">Partner Login</h1>
               <p className="text-slate-500 text-sm mt-2">Access your referral dashboard</p>
             </div>
+
+            {/* Demo Credentials Banner */}
+            <div 
+              data-testid="partner-demo-credentials"
+              className="bg-[#F97316]/5 border border-[#F97316]/20 rounded-sm p-4 mb-6"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-[#F97316] uppercase tracking-wider">Demo Credentials</span>
+                <button
+                  data-testid="partner-fill-demo-btn"
+                  onClick={fillDemoCredentials}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2a4599] hover:text-[#1e3a8a] transition-colors"
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Filled!' : 'Use Demo'}
+                </button>
+              </div>
+              <div className="space-y-1 text-sm text-slate-600">
+                <div>Phone: <span className="font-mono font-semibold text-[#010822]">{DEMO_PARTNER.phone}</span></div>
+                <div>Password: <span className="font-mono font-semibold text-[#010822]">{DEMO_PARTNER.password}</span></div>
+              </div>
+            </div>
+
             <div className="bg-white p-8 border border-slate-200 rounded-sm shadow-sm">
               <form onSubmit={handlePasswordLogin} className="space-y-5">
                 <div>
