@@ -16,13 +16,17 @@ class AlphaGroupsAPITester:
         self.partner_email = f"test_partner_{datetime.now().strftime('%H%M%S')}@test.com"
         self.partner_password = "PartnerPass123!"
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None, token_type='admin'):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
         test_headers = {'Content-Type': 'application/json'}
         
-        if self.token:
-            test_headers['Authorization'] = f'Bearer {self.token}'
+        # Use appropriate token based on type
+        if token_type == 'admin' and self.admin_token:
+            test_headers['Authorization'] = f'Bearer {self.admin_token}'
+        elif token_type == 'partner' and self.partner_token:
+            test_headers['Authorization'] = f'Bearer {self.partner_token}'
+        
         if headers:
             test_headers.update(headers)
 
