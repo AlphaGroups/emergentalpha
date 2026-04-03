@@ -361,8 +361,8 @@ class AlphaGroupsAPITester:
         return success
 
 def main():
-    print("🚀 Starting Alpha Groups API Tests")
-    print("=" * 50)
+    print("🚀 Starting Alpha Groups API Tests - Enhanced Version")
+    print("=" * 60)
     
     tester = AlphaGroupsAPITester()
     
@@ -373,10 +373,17 @@ def main():
     tester.test_calculate_endpoint()
     tester.test_invalid_calculate()
     
+    # Test new public endpoints
+    print("\n🏢 Testing New Public Endpoints")
+    tester.test_referral_terms()
+    tester.test_listings_endpoint()
+    
     # Test lead creation
     print("\n👥 Testing Lead Management")
     lead_id = tester.test_create_lead()
     quote_id = tester.test_quote_request()
+    collab_id = tester.test_collaboration_leads()
+    vendor_id = tester.test_vendor_registration()
     
     # Test admin authentication
     print("\n🔐 Testing Admin Authentication")
@@ -388,6 +395,15 @@ def main():
         print("\n📊 Testing Admin Endpoints")
         tester.test_admin_analytics()
         leads = tester.test_admin_leads()
+        tester.test_admin_packages()
+        partners = tester.test_admin_partners()
+        
+        # Test partner creation and login
+        print("\n🤝 Testing Partner Management")
+        partner_data = tester.test_create_partner()
+        if partner_data:
+            if tester.test_partner_login():
+                tester.test_partner_dashboard()
         
         # Test lead update if we have leads
         if leads and len(leads) > 0:
@@ -400,7 +416,7 @@ def main():
     tester.test_unauthorized_access()
     
     # Print results
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
     
     if tester.tests_passed == tester.tests_run:
