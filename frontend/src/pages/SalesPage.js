@@ -41,7 +41,8 @@ const SalesPage = () => {
       if (filters.status !== 'all') params.append('status', filters.status);
       
       const response = await axios.get(`${API}/listings?${params}`);
-      setListings(response.data);
+      const data = response.data;
+      setListings(Array.isArray(data) ? data : Array.isArray(data?.listings) ? data.listings : Array.isArray(data?.data) ? data.data : []);
     } catch (error) {
       console.error('Failed to fetch listings:', error);
     } finally {
