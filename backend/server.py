@@ -463,7 +463,7 @@ async def seed_demo_partner():
             referral_code="AGDEMO01",
             is_active=True
         )
-        supabase.table("partners").insert(demo_partner.model_dump().execute())
+        supabase.table("partners").insert(demo_partner.model_dump()).execute()
         logger.info("Demo partner seeded: phone=9876543210, password=partner123")
 
 async def seed_demo_admin():
@@ -710,7 +710,7 @@ async def partner_verify_otp(verify: PartnerOTPVerify):
         is_active=True
     )
     
-    supabase.table("partners").insert(partner.model_dump().execute())
+    supabase.table("partners").insert(partner.model_dump()).execute()
     del otp_store[verify.phone]
     
     token = create_token(reg_data["phone"], role="partner")
@@ -841,7 +841,7 @@ async def partner_reset_confirm(data: PartnerResetConfirm):
     
     new_hash = hash_password(data.new_password)
     result = supabase.table("partners").update({"password": new_hash}).eq("phone", data.phone).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Partner not found")
     
     del otp_store[f"reset_{data.phone}"]
@@ -934,9 +934,9 @@ async def admin_register(admin_data: AdminCreate):
         "name": admin_data.name,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    supabase.table("admins").insert(doc).execute()
+    supabase.table("admins").insert(admin_dict).execute()
     token = create_token(admin_data.email, role="admin")
-    return {"token": token, "email": doc["email"], "name": doc["name"]}
+    return {"token": token, "email": admin_dict["email"], "name": admin_dict["name"]}
 
 @api_router.get("/admin/me")
 async def get_admin_profile(email: str = Depends(verify_admin_token)):
@@ -959,7 +959,7 @@ async def get_all_leads(
     email: str = Depends(verify_admin_token)
 ):
     """Get all leads"""
-    query = {}
+    query = supabase.table("leads").select("*")
     if status:
         query = query.eq("status", status)
     if source:
@@ -994,7 +994,7 @@ async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(ver
                 update_data["referral_earning"] = update_data["deal_value"] * (commission / 100)
     
     result = supabase.table("leads").update(update_data).eq("id", lead_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
 
     return Lead(**result.data[0])
@@ -1003,7 +1003,7 @@ async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(ver
 async def delete_lead(lead_id: str, email: str = Depends(verify_admin_token)):
     """Delete lead"""
     result = supabase.table("leads").delete().eq("id", lead_id).execute()
-    if result.deleted_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted"}
 
@@ -1021,7 +1021,7 @@ async def update_package_config(package_name: str, update: PackageConfigUpdate, 
     """Update package configuration"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     result = supabase.table("package_configs").update(update_data).eq("name", package_name).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Package not found")
     return {"message": "Package updated"}
 
@@ -1029,7 +1029,7 @@ async def update_package_config(package_name: str, update: PackageConfigUpdate, 
 async def add_package_feature(feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
     """Add new package feature"""
     feature_doc = PackageFeature(**feature.model_dump())
-    supabase.table("package_features").insert(feature_doc.model_dump().execute())
+    supabase.table("package_features").insert(feature_doc.model_dump()).execute()
     return feature_doc
 
 @api_router.patch("/admin/packages/features/{feature_id}")
@@ -1037,7 +1037,7 @@ async def update_package_feature(feature_id: str, feature: PackageFeatureCreate,
     """Update package feature"""
     update_data = feature.model_dump()
     result = supabase.table("package_features").update(update_data).eq("id", feature_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature updated"}
 
@@ -1045,7 +1045,7 @@ async def update_package_feature(feature_id: str, feature: PackageFeatureCreate,
 async def delete_package_feature(feature_id: str, email: str = Depends(verify_admin_token)):
     """Delete package feature"""
     result = supabase.table("package_features").delete().eq("id", feature_id).execute()
-    if result.deleted_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature deleted"}
 
@@ -1074,7 +1074,7 @@ async def create_partner(partner_data: PartnerCreate, email: str = Depends(verif
         commission_percent=partner_data.commission_percent
     )
     
-    supabase.table("partners").insert(partner.model_dump().execute())
+    supabase.table("partners").insert(partner.model_dump()).execute()
     return {
         "id": partner.id,
         "name": partner.name,
@@ -1087,7 +1087,7 @@ async def update_partner(partner_id: str, update: PartnerUpdate, email: str = De
     """Update partner"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     result = supabase.table("partners").update(update_data).eq("id", partner_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner updated"}
 
@@ -1095,7 +1095,7 @@ async def update_partner(partner_id: str, update: PartnerUpdate, email: str = De
 async def delete_partner(partner_id: str, email: str = Depends(verify_admin_token)):
     """Delete partner"""
     result = supabase.table("partners").delete().eq("id", partner_id).execute()
-    if result.deleted_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner deleted"}
 
@@ -1111,7 +1111,7 @@ async def get_collaboration_leads(email: str = Depends(verify_admin_token)):
 async def update_collaboration_lead(lead_id: str, status: str, email: str = Depends(verify_admin_token)):
     """Update collaboration lead status"""
     result = supabase.table("collaboration_leads").update({"status": status}).eq("id", lead_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead updated"}
 
@@ -1127,7 +1127,7 @@ async def admin_get_listings(email: str = Depends(verify_admin_token)):
 async def create_listing(listing_data: SalesListingCreate, email: str = Depends(verify_admin_token)):
     """Create new listing"""
     listing = SalesListing(**listing_data.model_dump())
-    supabase.table("listings").insert(listing.model_dump().execute())
+    supabase.table("listings").insert(listing.model_dump()).execute()
     return listing
 
 @api_router.patch("/admin/listings/{listing_id}")
@@ -1135,7 +1135,7 @@ async def update_listing(listing_id: str, update: SalesListingUpdate, email: str
     """Update listing"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     result = supabase.table("listings").update(update_data).eq("id", listing_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing updated"}
 
@@ -1143,7 +1143,7 @@ async def update_listing(listing_id: str, update: SalesListingUpdate, email: str
 async def delete_listing(listing_id: str, email: str = Depends(verify_admin_token)):
     """Delete listing"""
     result = supabase.table("listings").delete().eq("id", listing_id).execute()
-    if result.deleted_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing deleted"}
 
@@ -1159,7 +1159,7 @@ async def get_all_vendors(email: str = Depends(verify_admin_token)):
 async def update_vendor_status(vendor_id: str, status: str, email: str = Depends(verify_admin_token)):
     """Update vendor status"""
     result = supabase.table("vendors").update({"status": status}).eq("id", vendor_id).execute()
-    if result.matched_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return {"message": "Vendor updated"}
 
@@ -1196,7 +1196,7 @@ async def add_material(data: dict, email: str = Depends(verify_admin_token)):
 async def delete_material(material_id: str, email: str = Depends(verify_admin_token)):
     """Delete marketing material"""
     result = supabase.table("marketing_materials").delete().eq("id", material_id).execute()
-    if result.deleted_count == 0:
+    if not result.data:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"message": "Material deleted"}
 
