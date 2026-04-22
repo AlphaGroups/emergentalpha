@@ -376,7 +376,8 @@ def verify_password(password: str, hashed: str) -> bool:
 
 async def seed_default_packages():
     """Seed default package configurations"""
-    existing = await db.package_configs.find_one({"name": "classic"})
+    res = supabase.table("package_configs").select("*").eq("name", "classic").execute()
+    existing = res.data[0] if res.data else None
     if not existing:
         default_configs = [
             {"id": str(uuid.uuid4()), "name": "classic", "description": "Essential quality construction", "price_per_sft": 1899, "is_visible": True, "order": 1},
@@ -384,7 +385,7 @@ async def seed_default_packages():
             {"id": str(uuid.uuid4()), "name": "signature", "description": "Premium luxury finishes", "price_per_sft": 2599, "is_visible": True, "order": 3},
             {"id": str(uuid.uuid4()), "name": "customize", "description": "Tailored to your needs", "price_per_sft": 0, "is_visible": True, "order": 4},
         ]
-        await db.package_configs.insert_many(default_configs)
+        supabase.table("package_configs").insert(default_configs).execute()
         
         default_features = [
             {"id": str(uuid.uuid4()), "name": "Steel", "classic": "Tata/JSW Fe500", "select": "Tata Tiscon Fe500D", "signature": "Tata Tiscon Super", "customize": "As per choice", "order": 1},
@@ -404,11 +405,12 @@ async def seed_default_packages():
             {"id": str(uuid.uuid4()), "name": "Kitchen", "classic": "Granite Top", "select": "SS Sink + Granite", "signature": "Modular Kitchen", "customize": "As per choice", "order": 15},
             {"id": str(uuid.uuid4()), "name": "Warranty", "classic": "1 Year", "select": "2 Years", "signature": "3 Years", "customize": "Negotiable", "order": 16},
         ]
-        await db.package_features.insert_many(default_features)
+        supabase.table("package_features").insert(default_features).execute()
 
 async def seed_referral_terms():
     """Seed default referral terms"""
-    existing = await db.referral_terms.find_one({"id": "referral_terms"})
+    res = supabase.table("referral_terms").select("*").eq("id", "referral_terms").execute()
+    existing = res.data[0] if res.data else None
     if not existing:
         default_terms = {
             "id": "referral_terms",
@@ -444,13 +446,14 @@ async def seed_referral_terms():
 9. This program is intended purely for business promotion and does not constitute employment or partnership.""",
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.referral_terms.insert_one(default_terms)
+        supabase.table("referral_terms").insert(default_terms).execute()
 
 # ===================== STARTUP EVENT =====================
 
 async def seed_demo_partner():
     """Seed demo partner account"""
-    existing = await db.partners.find_one({"phone": "9876543210"})
+    res = supabase.table("partners").select("*").eq("phone", "9876543210").execute()
+    existing = res.data[0] if res.data else None
     if not existing:
         demo_partner = Partner(
             name="Demo Partner",
@@ -460,12 +463,13 @@ async def seed_demo_partner():
             referral_code="AGDEMO01",
             is_active=True
         )
-        await db.partners.insert_one(demo_partner.model_dump())
+        supabase.table("partners").insert(demo_partner.model_dump().execute())
         logger.info("Demo partner seeded: phone=9876543210, password=partner123")
 
 async def seed_demo_admin():
     """Seed demo admin account"""
-    existing = await db.admins.find_one({"email": "test@alpha.com"})
+    res = supabase.table("admins").select("*").eq("email", "test@alpha.com").execute()
+    existing = res.data[0] if res.data else None
     if not existing:
         admin_doc = {
             "id": str(uuid.uuid4()),
@@ -475,15 +479,12 @@ async def seed_demo_admin():
             "role": "admin",
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.admins.insert_one(admin_doc)
+        supabase.table("admins").insert(admin_doc).execute()
         logger.info("Demo admin seeded: email=test@alpha.com, password=password123")
     else:
         # Ensure password is correct for demo
         if not verify_password("password123", existing.get("password", "")):
-            await db.admins.update_one(
-                {"email": "test@alpha.com"},
-                {"$set": {"password": hash_password("password123")}}
-            )
+            supabase.table("admins").update({"password": hash_password("password123")}).eq("email", "test@alpha.com").execute()
             logger.info("Demo admin password reset to: password123")
 
 @app.on_event("startup")
@@ -504,13 +505,13 @@ async def root():
 @api_router.get("/packages")
 async def get_packages():
     """Get all visible packages with features for comparison"""
-    configs = await db.package_configs.find({"is_visible": True}, {"_id": 0}).sort("order", 1).to_list(10)
-    features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    configs = supabase.table("package_configs").select("*").eq("is_visible", True).order("order", desc=False).limit(10).execute().data
+    features = supabase.table("package_features").select("*").order("order", desc=False).limit(100).execute().data
     
     if not configs:
         await seed_default_packages()
-        configs = await db.package_configs.find({"is_visible": True}, {"_id": 0}).sort("order", 1).to_list(10)
-        features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+        configs = supabase.table("package_configs").select("*").eq("is_visible", True).order("order", desc=False).limit(10).execute().data
+        features = supabase.table("package_features").select("*").order("order", desc=False).limit(100).execute().data
     
     return {
         "configs": configs,
@@ -530,7 +531,8 @@ async def calculate_cost(calc_input: CalculatorInput):
     if package_name not in VALID_PACKAGE_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid package type. Must be one of: {', '.join(VALID_PACKAGE_TYPES)}")
     
-    config = await db.package_configs.find_one({"name": package_name}, {"_id": 0})
+    res = supabase.table("package_configs").select("*").eq("name", package_name).execute()
+    config = res.data[0] if res.data else None
     
     if not config:
         raise HTTPException(status_code=400, detail="Invalid package type")
@@ -560,12 +562,13 @@ async def create_lead(lead_data: LeadCreate):
     
     # Check if referral code exists
     if lead_data.referral_code:
-        partner = await db.partners.find_one({"referral_code": lead_data.referral_code}, {"_id": 0})
+        res = supabase.table("partners").select("*").eq("referral_code", lead_data.referral_code).execute()
+        partner = res.data[0] if res.data else None
         if partner:
             lead.partner_id = partner["id"]
     
     doc = lead.model_dump()
-    await db.leads.insert_one(doc)
+    supabase.table("leads").insert(doc).execute()
     return lead
 
 @api_router.post("/quote-request", response_model=Lead)
@@ -585,12 +588,13 @@ async def create_quote_request(quote: QuoteRequest):
     )
     
     if quote.referral_code:
-        partner = await db.partners.find_one({"referral_code": quote.referral_code}, {"_id": 0})
+        res = supabase.table("partners").select("*").eq("referral_code", quote.referral_code).execute()
+        partner = res.data[0] if res.data else None
         if partner:
             lead.partner_id = partner["id"]
     
     doc = lead.model_dump()
-    await db.leads.insert_one(doc)
+    supabase.table("leads").insert(doc).execute()
     return lead
 
 # ===================== COLLABORATION LEADS (PUBLIC) =====================
@@ -600,7 +604,7 @@ async def create_collaboration_lead(lead_data: CollaborationLeadCreate):
     """Create collaboration/landowner lead"""
     lead = CollaborationLead(**lead_data.model_dump())
     doc = lead.model_dump()
-    await db.collaboration_leads.insert_one(doc)
+    supabase.table("collaboration_leads").insert(doc).execute()
     return lead
 
 # ===================== SALES LISTINGS (PUBLIC) =====================
@@ -614,13 +618,14 @@ async def get_listings(status: Optional[str] = None, property_type: Optional[str
     if property_type:
         query["property_type"] = property_type
     
-    listings = await db.listings.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    listings = supabase.table("listings").select("*").match(query).order("created_at", desc=True).limit(100).execute().data
     return listings
 
 @api_router.get("/listings/{listing_id}")
 async def get_listing(listing_id: str):
     """Get single listing details"""
-    listing = await db.listings.find_one({"id": listing_id}, {"_id": 0})
+    res = supabase.table("listings").select("*").eq("id", listing_id).execute()
+    listing = res.data[0] if res.data else None
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     return listing
@@ -637,7 +642,7 @@ async def register_vendor(vendor_data: VendorCreate):
         vendor.document_url = f"data:application/pdf;base64,{vendor_data.document_data[:100]}..."  # Store reference
     
     doc = vendor.model_dump()
-    await db.vendors.insert_one(doc)
+    supabase.table("vendors").insert(doc).execute()
     return {"vendor_id": vendor.vendor_id, "message": "Registration successful"}
 
 # ===================== REFERRAL TERMS (PUBLIC) =====================
@@ -645,10 +650,12 @@ async def register_vendor(vendor_data: VendorCreate):
 @api_router.get("/referral-terms")
 async def get_referral_terms():
     """Get public referral terms"""
-    terms = await db.referral_terms.find_one({"id": "referral_terms"}, {"_id": 0})
+    res = supabase.table("referral_terms").select("*").eq("id", "referral_terms").execute()
+    terms = res.data[0] if res.data else None
     if not terms:
         await seed_referral_terms()
-        terms = await db.referral_terms.find_one({"id": "referral_terms"}, {"_id": 0})
+        res = supabase.table("referral_terms").select("*").eq("id", "referral_terms").execute()
+        terms = res.data[0] if res.data else None
     return terms
 
 # ===================== PARTNER AUTH =====================
@@ -659,12 +666,14 @@ otp_store = {}
 @api_router.post("/partner/register")
 async def partner_register(data: PartnerRegister):
     """Register new partner - sends mocked OTP"""
-    existing = await db.partners.find_one({"phone": data.phone})
+    res = supabase.table("partners").select("*").eq("phone", data.phone).execute()
+    existing = res.data[0] if res.data else None
     if existing:
         raise HTTPException(status_code=400, detail="Phone number already registered")
     
     if data.email:
-        email_exists = await db.partners.find_one({"email": data.email})
+        res = supabase.table("partners").select("*").eq("email", data.email).execute()
+        email_exists = res.data[0] if res.data else None
         if email_exists:
             raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -701,7 +710,7 @@ async def partner_verify_otp(verify: PartnerOTPVerify):
         is_active=True
     )
     
-    await db.partners.insert_one(partner.model_dump())
+    supabase.table("partners").insert(partner.model_dump().execute())
     del otp_store[verify.phone]
     
     token = create_token(reg_data["phone"], role="partner")
@@ -733,13 +742,14 @@ async def create_quick_lead(data: QuickLeadCreate):
         source="homepage_cta"
     )
     doc = lead.model_dump()
-    await db.leads.insert_one(doc)
+    supabase.table("leads").insert(doc).execute()
     return {"message": "Thank you! We'll call you back shortly.", "lead_id": lead.id}
 
 @api_router.post("/partner/login")
 async def partner_login(creds: PartnerLogin):
     """Partner login with phone + password"""
-    partner = await db.partners.find_one({"phone": creds.phone}, {"_id": 0})
+    res = supabase.table("partners").select("*").eq("phone", creds.phone).execute()
+    partner = res.data[0] if res.data else None
     if not partner:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, partner["password"]):
@@ -762,7 +772,8 @@ async def partner_login(creds: PartnerLogin):
 @api_router.post("/partner/login-otp")
 async def partner_login_otp_request(data: PartnerOTPLogin):
     """Request OTP for login"""
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    res = supabase.table("partners").select("*").eq("phone", data.phone).execute()
+    partner = res.data[0] if res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="No account found with this phone number")
     if not partner.get("is_active", True):
@@ -785,7 +796,8 @@ async def partner_login_otp_verify(data: PartnerOTPLoginVerify):
         del otp_store[f"login_{data.phone}"]
         raise HTTPException(status_code=400, detail="OTP expired")
     
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    res = supabase.table("partners").select("*").eq("phone", data.phone).execute()
+    partner = res.data[0] if res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -805,7 +817,8 @@ async def partner_login_otp_verify(data: PartnerOTPLoginVerify):
 @api_router.post("/partner/reset-password")
 async def partner_reset_request(data: PartnerResetRequest):
     """Request password reset OTP"""
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    res = supabase.table("partners").select("*").eq("phone", data.phone).execute()
+    partner = res.data[0] if res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="No account found with this phone number")
     
@@ -827,7 +840,7 @@ async def partner_reset_confirm(data: PartnerResetConfirm):
         raise HTTPException(status_code=400, detail="OTP expired")
     
     new_hash = hash_password(data.new_password)
-    result = await db.partners.update_one({"phone": data.phone}, {"$set": {"password": new_hash}})
+    result = supabase.table("partners").update({"password": new_hash}).eq("phone", data.phone).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Partner not found")
     
@@ -839,36 +852,26 @@ async def partner_reset_confirm(data: PartnerResetConfirm):
 @api_router.get("/partner/dashboard")
 async def get_partner_dashboard(identifier: str = Depends(verify_partner_token)):
     """Get partner dashboard data"""
-    partner = await db.partners.find_one(
-        {"$or": [{"phone": identifier}, {"email": identifier}]},
-        {"_id": 0, "password": 0}
-    )
+    partner_res = supabase.table("partners").select("id,name,email,phone,referral_code,commission_percent,account_manager,is_active,created_at").or_(f"phone.eq.{identifier},email.eq.{identifier}").execute()
+    partner = partner_res.data[0] if partner_res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
     referral_code = partner["referral_code"]
     
     # Get lead stats
-    total_leads = await db.leads.count_documents({"referral_code": referral_code})
-    new_leads = await db.leads.count_documents({"referral_code": referral_code, "status": "new"})
-    in_progress = await db.leads.count_documents({"referral_code": referral_code, "status": {"$in": ["contacted", "in_progress"]}})
-    converted = await db.leads.count_documents({"referral_code": referral_code, "status": "converted"})
+    total_leads = supabase.table("leads").select("*", count="exact", head=True).eq("referral_code", referral_code).execute().count
+    new_leads = supabase.table("leads").select("*", count="exact", head=True).eq("referral_code", referral_code).eq("status", "new").execute().count
+    in_progress = supabase.table("leads").select("*", count="exact", head=True).eq("referral_code", referral_code).in_("status", ["contacted", "in_progress"]).execute().count
+    converted = supabase.table("leads").select("*", count="exact", head=True).eq("referral_code", referral_code).eq("status", "converted").execute().count
     
     # Calculate earnings
-    pipeline = [
-        {"$match": {"referral_code": referral_code, "status": "converted", "referral_earning": {"$exists": True}}},
-        {"$group": {"_id": None, "total": {"$sum": "$referral_earning"}}}
-    ]
-    earnings_result = await db.leads.aggregate(pipeline).to_list(1)
-    total_earnings = earnings_result[0]["total"] if earnings_result else 0
+    res = supabase.table("leads").select("referral_earning").eq("referral_code", referral_code).eq("status", "converted").not_.is_null("referral_earning").execute()
+    total_earnings = sum(item["referral_earning"] for item in res.data if item["referral_earning"])
     
     # Paid earnings
-    paid_pipeline = [
-        {"$match": {"partner_id": partner["id"], "status": "paid"}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]
-    paid_result = await db.partner_payments.aggregate(paid_pipeline).to_list(1)
-    paid_earnings = paid_result[0]["total"] if paid_result else 0
+    res_paid = supabase.table("partner_payments").select("amount").eq("partner_id", partner["id"]).eq("status", "paid").execute()
+    paid_earnings = sum(item["amount"] for item in res_paid.data if item["amount"])
     
     return {
         "partner": partner,
@@ -886,24 +889,19 @@ async def get_partner_dashboard(identifier: str = Depends(verify_partner_token))
 @api_router.get("/partner/leads")
 async def get_partner_leads(identifier: str = Depends(verify_partner_token)):
     """Get partner's referred leads"""
-    partner = await db.partners.find_one(
-        {"$or": [{"phone": identifier}, {"email": identifier}]},
-        {"_id": 0}
-    )
+    partner_res = supabase.table("partners").select("*").or_(f"phone.eq.{identifier},email.eq.{identifier}").execute()
+    partner = partner_res.data[0] if partner_res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
-    leads = await db.leads.find(
-        {"referral_code": partner["referral_code"]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    leads = supabase.table("leads").select("*").eq("referral_code", partner["referral_code"]).order("created_at", desc=True).limit(100).execute().data
     
     return leads
 
 @api_router.get("/partner/materials")
 async def get_partner_materials(identifier: str = Depends(verify_partner_token)):
     """Get marketing materials for partner"""
-    materials = await db.marketing_materials.find({}, {"_id": 0}).to_list(50)
+    materials = supabase.table("marketing_materials").select("*").limit(50).execute().data
     return materials
 
 # ===================== ADMIN AUTH =====================
@@ -911,7 +909,8 @@ async def get_partner_materials(identifier: str = Depends(verify_partner_token))
 @api_router.post("/admin/login")
 async def admin_login(creds: AdminLogin):
     """Admin login"""
-    admin = await db.admins.find_one({"email": creds.email}, {"_id": 0})
+    res = supabase.table("admins").select("*").eq("email", creds.email).execute()
+    admin = res.data[0] if res.data else None
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, admin["password"]):
@@ -923,7 +922,8 @@ async def admin_login(creds: AdminLogin):
 @api_router.post("/admin/register")
 async def admin_register(admin_data: AdminCreate):
     """Register admin (first-time setup only)"""
-    existing = await db.admins.find_one({"email": admin_data.email})
+    res = supabase.table("admins").select("*").eq("email", admin_data.email).execute()
+    existing = res.data[0] if res.data else None
     if existing:
         raise HTTPException(status_code=400, detail="Admin already exists")
 
@@ -934,14 +934,15 @@ async def admin_register(admin_data: AdminCreate):
         "name": admin_data.name,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.admins.insert_one(doc)
+    supabase.table("admins").insert(doc).execute()
     token = create_token(admin_data.email, role="admin")
     return {"token": token, "email": doc["email"], "name": doc["name"]}
 
 @api_router.get("/admin/me")
 async def get_admin_profile(email: str = Depends(verify_admin_token)):
     """Get admin profile"""
-    admin = await db.admins.find_one({"email": email}, {"_id": 0, "password": 0})
+    res = supabase.table("admins").select("*").eq("email", email).execute()
+    admin = res.data[0] if res.data else None
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
     
@@ -970,7 +971,8 @@ async def get_all_leads(
 @api_router.get("/admin/leads/{lead_id}")
 async def get_lead(lead_id: str, email: str = Depends(verify_admin_token)):
     """Get single lead"""
-    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    res = supabase.table("leads").select("*").eq("id", lead_id).execute()
+    lead = res.data[0] if res.data else None
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     return Lead(**lead)
@@ -982,14 +984,16 @@ async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(ver
     
     # Calculate referral earning if deal_value is set and lead has partner
     if "deal_value" in update_data:
-        lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+        res = supabase.table("leads").select("*").eq("id", lead_id).execute()
+        lead = res.data[0] if res.data else None
         if lead and lead.get("partner_id"):
-            partner = await db.partners.find_one({"id": lead["partner_id"]}, {"_id": 0})
+            res = supabase.table("partners").select("*").eq("id", lead["partner_id"]).execute()
+            partner = res.data[0] if res.data else None
             if partner:
                 commission = partner.get("commission_percent", 2.0)
                 update_data["referral_earning"] = update_data["deal_value"] * (commission / 100)
     
-    result = await db.leads.update_one({"id": lead_id}, {"$set": update_data})
+    result = supabase.table("leads").update(update_data).eq("id", lead_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -998,7 +1002,7 @@ async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(ver
 @api_router.delete("/admin/leads/{lead_id}")
 async def delete_lead(lead_id: str, email: str = Depends(verify_admin_token)):
     """Delete lead"""
-    result = await db.leads.delete_one({"id": lead_id})
+    result = supabase.table("leads").delete().eq("id", lead_id).execute()
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted"}
@@ -1008,15 +1012,15 @@ async def delete_lead(lead_id: str, email: str = Depends(verify_admin_token)):
 @api_router.get("/admin/packages")
 async def admin_get_packages(email: str = Depends(verify_admin_token)):
     """Get all packages for admin"""
-    configs = await db.package_configs.find({}, {"_id": 0}).sort("order", 1).to_list(10)
-    features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+    configs = supabase.table("package_configs").select("*").order("order", desc=False).limit(10).execute().data
+    features = supabase.table("package_features").select("*").order("order", desc=False).limit(100).execute().data
     return {"configs": configs, "features": features}
 
 @api_router.patch("/admin/packages/{package_name}")
 async def update_package_config(package_name: str, update: PackageConfigUpdate, email: str = Depends(verify_admin_token)):
     """Update package configuration"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.package_configs.update_one({"name": package_name}, {"$set": update_data})
+    result = supabase.table("package_configs").update(update_data).eq("name", package_name).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Package not found")
     return {"message": "Package updated"}
@@ -1025,14 +1029,14 @@ async def update_package_config(package_name: str, update: PackageConfigUpdate, 
 async def add_package_feature(feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
     """Add new package feature"""
     feature_doc = PackageFeature(**feature.model_dump())
-    await db.package_features.insert_one(feature_doc.model_dump())
+    supabase.table("package_features").insert(feature_doc.model_dump().execute())
     return feature_doc
 
 @api_router.patch("/admin/packages/features/{feature_id}")
 async def update_package_feature(feature_id: str, feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
     """Update package feature"""
     update_data = feature.model_dump()
-    result = await db.package_features.update_one({"id": feature_id}, {"$set": update_data})
+    result = supabase.table("package_features").update(update_data).eq("id", feature_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature updated"}
@@ -1040,7 +1044,7 @@ async def update_package_feature(feature_id: str, feature: PackageFeatureCreate,
 @api_router.delete("/admin/packages/features/{feature_id}")
 async def delete_package_feature(feature_id: str, email: str = Depends(verify_admin_token)):
     """Delete package feature"""
-    result = await db.package_features.delete_one({"id": feature_id})
+    result = supabase.table("package_features").delete().eq("id", feature_id).execute()
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature deleted"}
@@ -1050,13 +1054,14 @@ async def delete_package_feature(feature_id: str, email: str = Depends(verify_ad
 @api_router.get("/admin/partners")
 async def get_all_partners(email: str = Depends(verify_admin_token)):
     """Get all partners"""
-    partners = await db.partners.find({}, {"_id": 0, "password": 0}).to_list(100)
+    partners = supabase.table("partners").select("id,name,email,phone,referral_code,commission_percent,account_manager,is_active,created_at").limit(100).execute().data
     return partners
 
 @api_router.post("/admin/partners")
 async def create_partner(partner_data: PartnerCreate, email: str = Depends(verify_admin_token)):
     """Create new partner account"""
-    existing = await db.partners.find_one({"email": partner_data.email})
+    res = supabase.table("partners").select("*").eq("email", partner_data.email).execute()
+    existing = res.data[0] if res.data else None
     if existing:
         raise HTTPException(status_code=400, detail="Partner email already exists")
     
@@ -1069,7 +1074,7 @@ async def create_partner(partner_data: PartnerCreate, email: str = Depends(verif
         commission_percent=partner_data.commission_percent
     )
     
-    await db.partners.insert_one(partner.model_dump())
+    supabase.table("partners").insert(partner.model_dump().execute())
     return {
         "id": partner.id,
         "name": partner.name,
@@ -1081,7 +1086,7 @@ async def create_partner(partner_data: PartnerCreate, email: str = Depends(verif
 async def update_partner(partner_id: str, update: PartnerUpdate, email: str = Depends(verify_admin_token)):
     """Update partner"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.partners.update_one({"id": partner_id}, {"$set": update_data})
+    result = supabase.table("partners").update(update_data).eq("id", partner_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner updated"}
@@ -1089,7 +1094,7 @@ async def update_partner(partner_id: str, update: PartnerUpdate, email: str = De
 @api_router.delete("/admin/partners/{partner_id}")
 async def delete_partner(partner_id: str, email: str = Depends(verify_admin_token)):
     """Delete partner"""
-    result = await db.partners.delete_one({"id": partner_id})
+    result = supabase.table("partners").delete().eq("id", partner_id).execute()
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner deleted"}
@@ -1099,13 +1104,13 @@ async def delete_partner(partner_id: str, email: str = Depends(verify_admin_toke
 @api_router.get("/admin/collaboration/leads")
 async def get_collaboration_leads(email: str = Depends(verify_admin_token)):
     """Get all collaboration leads"""
-    leads = await db.collaboration_leads.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    leads = supabase.table("collaboration_leads").select("*").order("created_at", desc=True).limit(500).execute().data
     return leads
 
 @api_router.patch("/admin/collaboration/leads/{lead_id}")
 async def update_collaboration_lead(lead_id: str, status: str, email: str = Depends(verify_admin_token)):
     """Update collaboration lead status"""
-    result = await db.collaboration_leads.update_one({"id": lead_id}, {"$set": {"status": status}})
+    result = supabase.table("collaboration_leads").update({"status": status}).eq("id", lead_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead updated"}
@@ -1115,21 +1120,21 @@ async def update_collaboration_lead(lead_id: str, status: str, email: str = Depe
 @api_router.get("/admin/listings")
 async def admin_get_listings(email: str = Depends(verify_admin_token)):
     """Get all listings for admin"""
-    listings = await db.listings.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    listings = supabase.table("listings").select("*").order("created_at", desc=True).limit(100).execute().data
     return listings
 
 @api_router.post("/admin/listings")
 async def create_listing(listing_data: SalesListingCreate, email: str = Depends(verify_admin_token)):
     """Create new listing"""
     listing = SalesListing(**listing_data.model_dump())
-    await db.listings.insert_one(listing.model_dump())
+    supabase.table("listings").insert(listing.model_dump().execute())
     return listing
 
 @api_router.patch("/admin/listings/{listing_id}")
 async def update_listing(listing_id: str, update: SalesListingUpdate, email: str = Depends(verify_admin_token)):
     """Update listing"""
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.listings.update_one({"id": listing_id}, {"$set": update_data})
+    result = supabase.table("listings").update(update_data).eq("id", listing_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing updated"}
@@ -1137,7 +1142,7 @@ async def update_listing(listing_id: str, update: SalesListingUpdate, email: str
 @api_router.delete("/admin/listings/{listing_id}")
 async def delete_listing(listing_id: str, email: str = Depends(verify_admin_token)):
     """Delete listing"""
-    result = await db.listings.delete_one({"id": listing_id})
+    result = supabase.table("listings").delete().eq("id", listing_id).execute()
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing deleted"}
@@ -1147,13 +1152,13 @@ async def delete_listing(listing_id: str, email: str = Depends(verify_admin_toke
 @api_router.get("/admin/vendors")
 async def get_all_vendors(email: str = Depends(verify_admin_token)):
     """Get all vendors"""
-    vendors = await db.vendors.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    vendors = supabase.table("vendors").select("*").order("created_at", desc=True).limit(500).execute().data
     return vendors
 
 @api_router.patch("/admin/vendors/{vendor_id}")
 async def update_vendor_status(vendor_id: str, status: str, email: str = Depends(verify_admin_token)):
     """Update vendor status"""
-    result = await db.vendors.update_one({"id": vendor_id}, {"$set": {"status": status}})
+    result = supabase.table("vendors").update({"status": status}).eq("id", vendor_id).execute()
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return {"message": "Vendor updated"}
@@ -1164,11 +1169,7 @@ async def update_vendor_status(vendor_id: str, status: str, email: str = Depends
 async def update_referral_terms(terms: ReferralTerms, email: str = Depends(verify_admin_token)):
     """Update referral terms"""
     terms.updated_at = datetime.now(timezone.utc).isoformat()
-    await db.referral_terms.update_one(
-        {"id": "referral_terms"},
-        {"$set": terms.model_dump()},
-        upsert=True
-    )
+    supabase.table("referral_terms").upsert(terms.model_dump()).execute()
     return {"message": "Terms updated"}
 
 # ===================== ADMIN - MARKETING MATERIALS =====================
@@ -1176,7 +1177,7 @@ async def update_referral_terms(terms: ReferralTerms, email: str = Depends(verif
 @api_router.get("/admin/materials")
 async def get_materials(email: str = Depends(verify_admin_token)):
     """Get all marketing materials"""
-    materials = await db.marketing_materials.find({}, {"_id": 0}).to_list(50)
+    materials = supabase.table("marketing_materials").select("*").limit(50).execute().data
     return materials
 
 @api_router.post("/admin/materials")
@@ -1188,13 +1189,13 @@ async def add_material(data: dict, email: str = Depends(verify_admin_token)):
         file_url=data.get("file_url", ""),
         file_type=data.get("file_type", "pdf")
     )
-    await db.marketing_materials.insert_one(material.model_dump())
+    supabase.table("marketing_materials").insert(material.model_dump()).execute()
     return {"id": material.id, "message": "Material added successfully"}
 
 @api_router.delete("/admin/materials/{material_id}")
 async def delete_material(material_id: str, email: str = Depends(verify_admin_token)):
     """Delete marketing material"""
-    result = await db.marketing_materials.delete_one({"id": material_id})
+    result = supabase.table("marketing_materials").delete().eq("id", material_id).execute()
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"message": "Material deleted"}
@@ -1206,10 +1207,7 @@ async def reorder_features(data: dict, email: str = Depends(verify_admin_token))
     """Reorder package features"""
     feature_orders = data.get("feature_orders", [])  # [{id: "xxx", order: 1}, ...]
     for item in feature_orders:
-        await db.package_features.update_one(
-            {"id": item["id"]},
-            {"$set": {"order": item["order"]}}
-        )
+        supabase.table("package_features").update({"order": item["order"]}).eq("id", item["id"]).execute()
     return {"message": "Features reordered successfully"}
 
 # ===================== ADMIN - PARTNER ANALYTICS =====================
@@ -1217,17 +1215,15 @@ async def reorder_features(data: dict, email: str = Depends(verify_admin_token))
 @api_router.get("/admin/partners/{partner_id}/analytics")
 async def get_partner_analytics(partner_id: str, email: str = Depends(verify_admin_token)):
     """Get analytics for a specific partner"""
-    partner = await db.partners.find_one({"id": partner_id}, {"_id": 0, "password": 0})
+    res = supabase.table("partners").select("*").eq("id", partner_id).execute()
+    partner = res.data[0] if res.data else None
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
     
     referral_code = partner.get("referral_code", "")
     
     # Get leads referred by this partner
-    all_leads = await db.leads.find(
-        {"referral_code": referral_code},
-        {"_id": 0}
-    ).to_list(200)
+    all_leads = supabase.table("leads").select("*").eq("referral_code", referral_code).limit(200).execute().data
     
     total_leads = len(all_leads)
     new_leads = sum(1 for l in all_leads if l.get("status") == "new")
@@ -1260,12 +1256,12 @@ async def get_partner_analytics(partner_id: str, email: str = Depends(verify_adm
 @api_router.get("/admin/partners-analytics")
 async def get_all_partners_analytics(email: str = Depends(verify_admin_token)):
     """Get analytics summary for all partners"""
-    partners = await db.partners.find({}, {"_id": 0, "password": 0}).to_list(200)
+    partners = supabase.table("partners").select("id,name,email,phone,referral_code,commission_percent,account_manager,is_active,created_at").limit(200).execute().data
     
     result = []
     for partner in partners:
         referral_code = partner.get("referral_code", "")
-        leads = await db.leads.find({"referral_code": referral_code}, {"_id": 0}).to_list(200)
+        leads = supabase.table("leads").select("*").eq("referral_code", referral_code).limit(200).execute().data
         
         total = len(leads)
         converted = sum(1 for l in leads if l.get("status") == "converted")
@@ -1293,30 +1289,30 @@ async def get_all_partners_analytics(email: str = Depends(verify_admin_token)):
 @api_router.get("/admin/analytics")
 async def get_analytics(email: str = Depends(verify_admin_token)):
     """Get dashboard analytics"""
-    total_leads = await db.leads.count_documents({})
-    new_leads = await db.leads.count_documents({"status": "new"})
-    contacted_leads = await db.leads.count_documents({"status": "contacted"})
-    converted_leads = await db.leads.count_documents({"status": "converted"})
+    total_leads = supabase.table("leads").select("*", count="exact", head=True).execute().count
+    new_leads = supabase.table("leads").select("*", count="exact", head=True).eq("status", "new").execute().count
+    contacted_leads = supabase.table("leads").select("*", count="exact", head=True).eq("status", "contacted").execute().count
+    converted_leads = supabase.table("leads").select("*", count="exact", head=True).eq("status", "converted").execute().count
     
     # Source breakdown
-    website_leads = await db.leads.count_documents({"source": "website"})
-    calculator_leads = await db.leads.count_documents({"source": "calculator"})
-    referral_leads = await db.leads.count_documents({"referral_code": {"$exists": True, "$ne": None}})
+    website_leads = supabase.table("leads").select("*", count="exact", head=True).eq("source", "website").execute().count
+    calculator_leads = supabase.table("leads").select("*", count="exact", head=True).eq("source", "calculator").execute().count
+    referral_leads = supabase.table("leads").select("*", count="exact", head=True).not_.is_null("referral_code").execute().count
     
     # Collaboration leads
-    collab_leads = await db.collaboration_leads.count_documents({})
+    collab_leads = supabase.table("collaboration_leads").select("*", count="exact", head=True).execute().count
     
     # Vendors
-    total_vendors = await db.vendors.count_documents({})
-    pending_vendors = await db.vendors.count_documents({"status": "pending"})
+    total_vendors = supabase.table("vendors").select("*", count="exact", head=True).execute().count
+    pending_vendors = supabase.table("vendors").select("*", count="exact", head=True).eq("status", "pending").execute().count
     
     # Partners
-    total_partners = await db.partners.count_documents({})
-    active_partners = await db.partners.count_documents({"is_active": True})
+    total_partners = supabase.table("partners").select("*", count="exact", head=True).execute().count
+    active_partners = supabase.table("partners").select("*", count="exact", head=True).eq("is_active", True).execute().count
     
     # Listings
-    total_listings = await db.listings.count_documents({})
-    available_listings = await db.listings.count_documents({"status": "available"})
+    total_listings = supabase.table("listings").select("*", count="exact", head=True).execute().count
+    available_listings = supabase.table("listings").select("*", count="exact", head=True).eq("status", "available").execute().count
     
     return {
         "leads": {
@@ -1365,6 +1361,3 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
