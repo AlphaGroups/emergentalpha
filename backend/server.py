@@ -1,28 +1,23 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
 import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
-import base64
 import random
 import string
+import database as db
 
 ROOT_DIR = Path(__file__).parent
-
-# Load environment-specific .env file
 node_env = os.getenv('NODE_ENV', 'development')
 env_file = ROOT_DIR / f'.env.{node_env}'
-
-# Load .env.{NODE_ENV} if exists, otherwise fall back to .env
 if env_file.exists():
     load_dotenv(env_file)
 else:
@@ -34,13 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Supabase client
-SUPABASE_URL = os.environ.get('SUPABASE_URL')
-SUPABASE_KEY = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_ANON_KEY')
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# JWT Config
-JWT_SECRET = os.environ.get('JWT_SECRET', 'alpha-groups-secret-key-2024')
+JWT_SECRET = os.environ.get('JWT_SECRET')
 JWT_ALGORITHM = "HS256"
 security = HTTPBearer()
 
@@ -49,7 +38,6 @@ api_router = APIRouter(prefix="/api")
 
 # ===================== MODELS =====================
 
-# Lead Models
 class LeadCreate(BaseModel):
     name: str
     phone: str
@@ -62,46 +50,10 @@ class LeadCreate(BaseModel):
     source: str = "website"
     referral_code: Optional[str] = None
 
-class Lead(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    phone: str
-    email: str
-    project_type: str
-    plot_area: Optional[float] = None
-    location: Optional[str] = None
-    budget: Optional[str] = None
-    message: Optional[str] = None
-    source: str = "website"
-    status: str = "new"
-    referral_code: Optional[str] = None
-    partner_id: Optional[str] = None
-    deal_value: Optional[float] = None
-    referral_earning: Optional[float] = None
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
 class LeadUpdate(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
     deal_value: Optional[float] = None
-
-# Package Models
-class PackageFeature(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    classic: str
-    select: str
-    signature: str
-    customize: str
-    order: int = 0
-
-class PackageConfig(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    description: str
-    price_per_sft: float
-    is_visible: bool = True
-    order: int = 0
 
 class PackageFeatureCreate(BaseModel):
     name: str
@@ -116,7 +68,6 @@ class PackageConfigUpdate(BaseModel):
     price_per_sft: Optional[float] = None
     is_visible: Optional[bool] = None
 
-# Referral Partner Models
 class PartnerCreate(BaseModel):
     name: str
     email: EmailStr
@@ -128,18 +79,6 @@ class PartnerLogin(BaseModel):
     phone: str
     password: str
 
-class Partner(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    email: Optional[str] = ""
-    phone: str
-    password: str
-    referral_code: str
-    commission_percent: float = 2.0
-    account_manager: Optional[str] = None
-    is_active: bool = True
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
 class PartnerUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
@@ -147,7 +86,6 @@ class PartnerUpdate(BaseModel):
     account_manager: Optional[str] = None
     is_active: Optional[bool] = None
 
-# Referral Terms Model
 class ReferralTerms(BaseModel):
     id: str = "referral_terms"
     commission_percent: float = 2.0
@@ -155,19 +93,6 @@ class ReferralTerms(BaseModel):
     payment_timeline_days: int = 30
     terms_content: str = ""
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-# Collaboration Lead Model
-class CollaborationLead(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    phone: str
-    email: EmailStr
-    land_location: str
-    land_size: str
-    intent: str  # landowner / investor / nri
-    message: Optional[str] = None
-    status: str = "new"
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CollaborationLeadCreate(BaseModel):
     name: str
@@ -177,25 +102,6 @@ class CollaborationLeadCreate(BaseModel):
     land_size: str
     intent: str
     message: Optional[str] = None
-
-# Sales Listing Model
-class SalesListing(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    property_type: str  # flat / villa / house
-    location: str
-    price: float
-    area_sqft: float
-    bedrooms: int
-    bathrooms: int
-    description: str
-    images: List[str] = []
-    status: str = "available"  # available / sold / coming_soon
-    owner_type: str = "alpha"  # alpha / partner
-    partner_id: Optional[str] = None
-    amenities: List[str] = []
-    is_featured: bool = False
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class SalesListingCreate(BaseModel):
     title: str
@@ -229,21 +135,6 @@ class SalesListingUpdate(BaseModel):
     amenities: Optional[List[str]] = None
     is_featured: Optional[bool] = None
 
-# Vendor Model
-class Vendor(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    vendor_id: str = Field(default_factory=lambda: f"VND{random.randint(10000, 99999)}")
-    name: str
-    company_name: Optional[str] = ""
-    phone: str
-    email: Optional[str] = ""
-    website: Optional[str] = None
-    categories: List[str] = []
-    description: Optional[str] = None
-    document_url: Optional[str] = None
-    status: str = "pending"  # pending / approved / rejected
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
 class VendorCreate(BaseModel):
     name: str
     company_name: Optional[str] = ""
@@ -252,16 +143,7 @@ class VendorCreate(BaseModel):
     website: Optional[str] = None
     categories: List[str] = []
     description: Optional[str] = None
-    document_data: Optional[str] = None  # Base64 encoded
-
-# Marketing Material Model
-class MarketingMaterial(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    description: str
-    file_url: str
-    file_type: str
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    document_data: Optional[str] = None
 
 class QuickLeadCreate(BaseModel):
     name: str
@@ -269,7 +151,6 @@ class QuickLeadCreate(BaseModel):
     location: Optional[str] = ""
     requirement: Optional[str] = ""
 
-# Partner Registration Models
 class PartnerRegister(BaseModel):
     name: str
     phone: str
@@ -295,7 +176,6 @@ class PartnerResetConfirm(BaseModel):
     otp: str
     new_password: str
 
-# Admin Models
 class AdminLogin(BaseModel):
     email: str
     password: str
@@ -322,23 +202,20 @@ class CalculatorInput(BaseModel):
     project_type: str
     package_type: str
 
-class CalculatorResult(BaseModel):
-    plot_area: float
-    project_type: str
-    package_type: str
-    base_rate: float
-    estimated_cost: float
-    min_estimate: float
-    max_estimate: float
-
 # ===================== HELPERS =====================
+
+def _uuid():
+    return str(uuid.uuid4())
+
+def _now():
+    return datetime.now(timezone.utc).isoformat()
 
 def generate_referral_code():
     return 'AG' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-def create_token(email: str, role: str = "admin") -> str:
+def create_token(sub: str, role: str = "admin") -> str:
     payload = {
-        "sub": email,
+        "sub": sub,
         "role": role,
         "exp": datetime.now(timezone.utc) + timedelta(hours=24),
         "iat": datetime.now(timezone.utc)
@@ -347,8 +224,7 @@ def create_token(email: str, role: str = "admin") -> str:
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
+        return jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
@@ -364,7 +240,7 @@ def verify_partner_token(credentials: HTTPAuthorizationCredentials = Depends(sec
     payload = verify_token(credentials)
     if payload.get("role") != "partner":
         raise HTTPException(status_code=403, detail="Partner access required")
-    return payload["sub"]  # Returns phone number
+    return payload["sub"]
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -372,50 +248,51 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
-# ===================== SEED DEFAULT DATA =====================
+# ===================== SEED DATA =====================
 
-async def seed_default_packages():
-    """Seed default package configurations"""
-    existing = await db.package_configs.find_one({"name": "classic"})
-    if not existing:
-        default_configs = [
-            {"id": str(uuid.uuid4()), "name": "classic", "description": "Essential quality construction", "price_per_sft": 1899, "is_visible": True, "order": 1},
-            {"id": str(uuid.uuid4()), "name": "select", "description": "Enhanced specifications", "price_per_sft": 2199, "is_visible": True, "order": 2},
-            {"id": str(uuid.uuid4()), "name": "signature", "description": "Premium luxury finishes", "price_per_sft": 2599, "is_visible": True, "order": 3},
-            {"id": str(uuid.uuid4()), "name": "customize", "description": "Tailored to your needs", "price_per_sft": 0, "is_visible": True, "order": 4},
-        ]
-        await db.package_configs.insert_many(default_configs)
-        
-        default_features = [
-            {"id": str(uuid.uuid4()), "name": "Steel", "classic": "Tata/JSW Fe500", "select": "Tata Tiscon Fe500D", "signature": "Tata Tiscon Super", "customize": "As per choice", "order": 1},
-            {"id": str(uuid.uuid4()), "name": "Cement", "classic": "UltraTech OPC 53", "select": "UltraTech Premium", "signature": "ACC Gold", "customize": "As per choice", "order": 2},
-            {"id": str(uuid.uuid4()), "name": "Aggregates", "classic": "20mm & River Sand", "select": "20mm & M-Sand", "signature": "Premium Crushed", "customize": "As per choice", "order": 3},
-            {"id": str(uuid.uuid4()), "name": "Blocks/Bricks", "classic": "Standard Red Bricks", "select": "AAC Blocks", "signature": "Premium AAC", "customize": "As per choice", "order": 4},
-            {"id": str(uuid.uuid4()), "name": "Flooring", "classic": "Vitrified 2x2", "select": "Granite/Marble", "signature": "Italian Marble", "customize": "As per choice", "order": 5},
-            {"id": str(uuid.uuid4()), "name": "Bathroom Tiles", "classic": "Standard Ceramic", "select": "Premium Ceramic", "signature": "Designer Tiles", "customize": "As per choice", "order": 6},
-            {"id": str(uuid.uuid4()), "name": "Sanitary", "classic": "Hindware Standard", "select": "Hindware Premium", "signature": "Jaquar/Kohler", "customize": "As per choice", "order": 7},
-            {"id": str(uuid.uuid4()), "name": "Electrical", "classic": "Finolex Wires", "select": "Havells", "signature": "Schneider", "customize": "As per choice", "order": 8},
-            {"id": str(uuid.uuid4()), "name": "Switches", "classic": "Anchor Roma", "select": "Legrand", "signature": "Schneider Modular", "customize": "As per choice", "order": 9},
-            {"id": str(uuid.uuid4()), "name": "Plumbing", "classic": "Astral CPVC", "select": "Supreme CPVC", "signature": "Ashirvad/Prince", "customize": "As per choice", "order": 10},
-            {"id": str(uuid.uuid4()), "name": "Doors (Main)", "classic": "Teak Frame + Flush", "select": "Teak Frame + Panel", "signature": "Full Teak Wood", "customize": "As per choice", "order": 11},
-            {"id": str(uuid.uuid4()), "name": "Windows", "classic": "Aluminium Sliding", "select": "uPVC Standard", "signature": "uPVC Premium", "customize": "As per choice", "order": 12},
-            {"id": str(uuid.uuid4()), "name": "Paints (Interior)", "classic": "Asian Tractor", "select": "Asian Royale", "signature": "Asian Ultima", "customize": "As per choice", "order": 13},
-            {"id": str(uuid.uuid4()), "name": "Paints (Exterior)", "classic": "Asian Ace", "select": "Asian Apex", "signature": "Asian Ultima Protek", "customize": "As per choice", "order": 14},
-            {"id": str(uuid.uuid4()), "name": "Kitchen", "classic": "Granite Top", "select": "SS Sink + Granite", "signature": "Modular Kitchen", "customize": "As per choice", "order": 15},
-            {"id": str(uuid.uuid4()), "name": "Warranty", "classic": "1 Year", "select": "2 Years", "signature": "3 Years", "customize": "Negotiable", "order": 16},
-        ]
-        await db.package_features.insert_many(default_features)
+def seed_default_packages():
+    existing = db.query_one('SELECT id FROM package_configs WHERE name = %s', ('classic',))
+    if existing:
+        return
+    configs = [
+        {"id": _uuid(), "name": "classic", "description": "Essential quality construction", "price_per_sft": 1899, "is_visible": True, "order": 1},
+        {"id": _uuid(), "name": "select", "description": "Enhanced specifications", "price_per_sft": 2199, "is_visible": True, "order": 2},
+        {"id": _uuid(), "name": "signature", "description": "Premium luxury finishes", "price_per_sft": 2599, "is_visible": True, "order": 3},
+        {"id": _uuid(), "name": "customize", "description": "Tailored to your needs", "price_per_sft": 0, "is_visible": True, "order": 4},
+    ]
+    db.insert_many("package_configs", configs)
 
-async def seed_referral_terms():
-    """Seed default referral terms"""
-    existing = await db.referral_terms.find_one({"id": "referral_terms"})
-    if not existing:
-        default_terms = {
-            "id": "referral_terms",
-            "commission_percent": 2.0,
-            "validity_days": 90,
-            "payment_timeline_days": 30,
-            "terms_content": """**Alpha Groups Referral Program – Terms & Conditions**
+    features = [
+        {"id": _uuid(), "name": "Steel", "classic": "Tata/JSW Fe500", "select": "Tata Tiscon Fe500D", "signature": "Tata Tiscon Super", "customize": "As per choice", "order": 1},
+        {"id": _uuid(), "name": "Cement", "classic": "UltraTech OPC 53", "select": "UltraTech Premium", "signature": "ACC Gold", "customize": "As per choice", "order": 2},
+        {"id": _uuid(), "name": "Aggregates", "classic": "20mm & River Sand", "select": "20mm & M-Sand", "signature": "Premium Crushed", "customize": "As per choice", "order": 3},
+        {"id": _uuid(), "name": "Blocks/Bricks", "classic": "Standard Red Bricks", "select": "AAC Blocks", "signature": "Premium AAC", "customize": "As per choice", "order": 4},
+        {"id": _uuid(), "name": "Flooring", "classic": "Vitrified 2x2", "select": "Granite/Marble", "signature": "Italian Marble", "customize": "As per choice", "order": 5},
+        {"id": _uuid(), "name": "Bathroom Tiles", "classic": "Standard Ceramic", "select": "Premium Ceramic", "signature": "Designer Tiles", "customize": "As per choice", "order": 6},
+        {"id": _uuid(), "name": "Sanitary", "classic": "Hindware Standard", "select": "Hindware Premium", "signature": "Jaquar/Kohler", "customize": "As per choice", "order": 7},
+        {"id": _uuid(), "name": "Electrical", "classic": "Finolex Wires", "select": "Havells", "signature": "Schneider", "customize": "As per choice", "order": 8},
+        {"id": _uuid(), "name": "Switches", "classic": "Anchor Roma", "select": "Legrand", "signature": "Schneider Modular", "customize": "As per choice", "order": 9},
+        {"id": _uuid(), "name": "Plumbing", "classic": "Astral CPVC", "select": "Supreme CPVC", "signature": "Ashirvad/Prince", "customize": "As per choice", "order": 10},
+        {"id": _uuid(), "name": "Doors (Main)", "classic": "Teak Frame + Flush", "select": "Teak Frame + Panel", "signature": "Full Teak Wood", "customize": "As per choice", "order": 11},
+        {"id": _uuid(), "name": "Windows", "classic": "Aluminium Sliding", "select": "uPVC Standard", "signature": "uPVC Premium", "customize": "As per choice", "order": 12},
+        {"id": _uuid(), "name": "Paints (Interior)", "classic": "Asian Tractor", "select": "Asian Royale", "signature": "Asian Ultima", "customize": "As per choice", "order": 13},
+        {"id": _uuid(), "name": "Paints (Exterior)", "classic": "Asian Ace", "select": "Asian Apex", "signature": "Asian Ultima Protek", "customize": "As per choice", "order": 14},
+        {"id": _uuid(), "name": "Kitchen", "classic": "Granite Top", "select": "SS Sink + Granite", "signature": "Modular Kitchen", "customize": "As per choice", "order": 15},
+        {"id": _uuid(), "name": "Warranty", "classic": "1 Year", "select": "2 Years", "signature": "3 Years", "customize": "Negotiable", "order": 16},
+    ]
+    db.insert_many("package_features", features)
+    logger.info("Default packages seeded")
+
+def seed_referral_terms():
+    existing = db.query_one('SELECT id FROM referral_terms WHERE id = %s', ('referral_terms',))
+    if existing:
+        return
+    terms = {
+        "id": "referral_terms",
+        "commission_percent": 2.0,
+        "validity_days": 90,
+        "payment_timeline_days": 30,
+        "terms_content": """**Alpha Groups Referral Program - Terms & Conditions**
 
 1. Referral partners will earn a commission based on a percentage of the final project value, as determined by Alpha Groups.
 
@@ -442,340 +319,282 @@ async def seed_referral_terms():
 8. Referral partners are expected to maintain ethical practices and represent the brand responsibly.
 
 9. This program is intended purely for business promotion and does not constitute employment or partnership.""",
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.referral_terms.insert_one(default_terms)
+        "updated_at": _now()
+    }
+    db.insert("referral_terms", terms)
+    logger.info("Referral terms seeded")
 
-# ===================== STARTUP EVENT =====================
+def seed_demo_partner():
+    existing = db.query_one('SELECT id FROM partners WHERE phone = %s', ('9876543210',))
+    if existing:
+        return
+    db.insert("partners", {
+        "id": _uuid(),
+        "name": "Demo Partner",
+        "email": "partner@alpha.com",
+        "phone": "9876543210",
+        "password": hash_password("partner123"),
+        "referral_code": "AGDEMO01",
+        "commission_percent": 2.0,
+        "is_active": True,
+        "created_at": _now()
+    })
+    logger.info("Demo partner seeded")
 
-async def seed_demo_partner():
-    """Seed demo partner account"""
-    existing = await db.partners.find_one({"phone": "9876543210"})
+def seed_demo_admin():
+    existing = db.query_one('SELECT * FROM admins WHERE email = %s', ('test@alpha.com',))
     if not existing:
-        demo_partner = Partner(
-            name="Demo Partner",
-            email="partner@alpha.com",
-            phone="9876543210",
-            password=hash_password("partner123"),
-            referral_code="AGDEMO01",
-            is_active=True
-        )
-        await db.partners.insert_one(demo_partner.model_dump())
-        logger.info("Demo partner seeded: phone=9876543210, password=partner123")
-
-async def seed_demo_admin():
-    """Seed demo admin account"""
-    existing = await db.admins.find_one({"email": "test@alpha.com"})
-    if not existing:
-        admin_doc = {
-            "id": str(uuid.uuid4()),
+        db.insert("admins", {
+            "id": _uuid(),
             "name": "Alpha Admin",
             "email": "test@alpha.com",
             "password": hash_password("password123"),
             "role": "admin",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.admins.insert_one(admin_doc)
-        logger.info("Demo admin seeded: email=test@alpha.com, password=password123")
+            "created_at": _now()
+        })
+        logger.info("Demo admin seeded")
     else:
-        # Ensure password is correct for demo
         if not verify_password("password123", existing.get("password", "")):
-            await db.admins.update_one(
-                {"email": "test@alpha.com"},
-                {"$set": {"password": hash_password("password123")}}
-            )
-            logger.info("Demo admin password reset to: password123")
+            db.execute('UPDATE admins SET password = %s WHERE email = %s', (hash_password("password123"), "test@alpha.com"))
+            logger.info("Demo admin password reset")
 
 @app.on_event("startup")
-async def startup_event():
-    await seed_default_packages()
-    await seed_referral_terms()
-    await seed_demo_partner()
-    await seed_demo_admin()
+def startup_event():
+    try:
+        seed_default_packages()
+        seed_referral_terms()
+        seed_demo_partner()
+        seed_demo_admin()
+        logger.info("Startup seeding complete")
+    except Exception as e:
+        logger.error(f"Startup seed failed: {e}")
 
 # ===================== PUBLIC ROUTES =====================
 
 @api_router.get("/")
-async def root():
+def root():
     return {"message": "Alpha Groups API", "status": "running"}
 
-# ===================== PACKAGES (PUBLIC) =====================
-
 @api_router.get("/packages")
-async def get_packages():
-    """Get all visible packages with features for comparison"""
-    configs = await db.package_configs.find({"is_visible": True}, {"_id": 0}).sort("order", 1).to_list(10)
-    features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
-    
+def get_packages():
+    configs = db.query('SELECT * FROM package_configs WHERE is_visible = true ORDER BY "order" ASC')
+    features = db.query('SELECT * FROM package_features ORDER BY "order" ASC')
     if not configs:
-        await seed_default_packages()
-        configs = await db.package_configs.find({"is_visible": True}, {"_id": 0}).sort("order", 1).to_list(10)
-        features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
-    
-    return {
-        "configs": configs,
-        "features": features
-    }
+        seed_default_packages()
+        configs = db.query('SELECT * FROM package_configs WHERE is_visible = true ORDER BY "order" ASC')
+        features = db.query('SELECT * FROM package_features ORDER BY "order" ASC')
+    return {"configs": configs, "features": features}
 
 VALID_PROJECT_TYPES = ["independent_house", "villa", "apartment", "school", "interior"]
 VALID_PACKAGE_TYPES = ["classic", "select", "signature", "customize"]
 
-@api_router.post("/calculate", response_model=CalculatorResult)
-async def calculate_cost(calc_input: CalculatorInput):
-    """Calculate construction cost based on package"""
+@api_router.post("/calculate")
+def calculate_cost(calc_input: CalculatorInput):
     if calc_input.project_type.lower() not in VALID_PROJECT_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid project type. Must be one of: {', '.join(VALID_PROJECT_TYPES)}")
-    
-    package_name = calc_input.package_type.lower()
-    if package_name not in VALID_PACKAGE_TYPES:
-        raise HTTPException(status_code=400, detail=f"Invalid package type. Must be one of: {', '.join(VALID_PACKAGE_TYPES)}")
-    
-    config = await db.package_configs.find_one({"name": package_name}, {"_id": 0})
-    
+        raise HTTPException(status_code=400, detail=f"Invalid project type")
+    pkg = calc_input.package_type.lower()
+    if pkg not in VALID_PACKAGE_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid package type")
+    config = db.query_one('SELECT price_per_sft FROM package_configs WHERE name = %s', (pkg,))
     if not config:
         raise HTTPException(status_code=400, detail="Invalid package type")
-    
-    base_rate = config.get("price_per_sft", 1899)
-    if base_rate == 0:  # Customize package
-        base_rate = 2299  # Use average for estimate
-    
-    estimated_cost = calc_input.plot_area * base_rate
-    
-    return CalculatorResult(
-        plot_area=calc_input.plot_area,
-        project_type=calc_input.project_type,
-        package_type=calc_input.package_type,
-        base_rate=base_rate,
-        estimated_cost=estimated_cost,
-        min_estimate=estimated_cost * 0.95,
-        max_estimate=estimated_cost * 1.10
-    )
+    base_rate = config["price_per_sft"] or 2299
+    if base_rate == 0:
+        base_rate = 2299
+    cost = calc_input.plot_area * base_rate
+    return {
+        "plot_area": calc_input.plot_area,
+        "project_type": calc_input.project_type,
+        "package_type": calc_input.package_type,
+        "base_rate": base_rate,
+        "estimated_cost": cost,
+        "min_estimate": cost * 0.95,
+        "max_estimate": cost * 1.10
+    }
 
 # ===================== LEADS (PUBLIC) =====================
 
-@api_router.post("/leads", response_model=Lead)
-async def create_lead(lead_data: LeadCreate):
-    """Create a new lead"""
-    lead = Lead(**lead_data.model_dump())
-    
-    # Check if referral code exists
+@api_router.post("/leads")
+def create_lead(lead_data: LeadCreate):
+    lead_id = _uuid()
+    partner_id = None
     if lead_data.referral_code:
-        partner = await db.partners.find_one({"referral_code": lead_data.referral_code}, {"_id": 0})
-        if partner:
-            lead.partner_id = partner["id"]
-    
-    doc = lead.model_dump()
-    await db.leads.insert_one(doc)
-    return lead
+        p = db.query_one('SELECT id FROM partners WHERE referral_code = %s', (lead_data.referral_code,))
+        if p:
+            partner_id = p["id"]
+    doc = {
+        "id": lead_id, "name": lead_data.name, "phone": lead_data.phone,
+        "email": lead_data.email or "", "project_type": lead_data.project_type,
+        "plot_area": lead_data.plot_area, "location": lead_data.location,
+        "budget": lead_data.budget, "message": lead_data.message,
+        "source": lead_data.source, "status": "new",
+        "referral_code": lead_data.referral_code, "partner_id": partner_id,
+        "created_at": _now()
+    }
+    db.insert("leads", doc)
+    return doc
 
-@api_router.post("/quote-request", response_model=Lead)
-async def create_quote_request(quote: QuoteRequest):
-    """Create lead from calculator quote request"""
-    lead = Lead(
-        name=quote.name,
-        phone=quote.phone,
-        email=quote.email,
-        project_type=quote.project_type,
-        plot_area=quote.plot_area,
-        location=quote.location,
-        budget=f"₹{quote.estimated_cost:,.0f} ({quote.package_type})",
-        message=quote.message,
-        source="calculator",
-        referral_code=quote.referral_code
-    )
-    
+@api_router.post("/quote-request")
+def create_quote_request(quote: QuoteRequest):
+    lead_id = _uuid()
+    partner_id = None
     if quote.referral_code:
-        partner = await db.partners.find_one({"referral_code": quote.referral_code}, {"_id": 0})
-        if partner:
-            lead.partner_id = partner["id"]
-    
-    doc = lead.model_dump()
-    await db.leads.insert_one(doc)
-    return lead
-
-# ===================== COLLABORATION LEADS (PUBLIC) =====================
+        p = db.query_one('SELECT id FROM partners WHERE referral_code = %s', (quote.referral_code,))
+        if p:
+            partner_id = p["id"]
+    doc = {
+        "id": lead_id, "name": quote.name, "phone": quote.phone,
+        "email": quote.email, "project_type": quote.project_type,
+        "plot_area": quote.plot_area, "location": quote.location,
+        "budget": f"₹{quote.estimated_cost:,.0f} ({quote.package_type})",
+        "message": quote.message, "source": "calculator",
+        "status": "new", "referral_code": quote.referral_code,
+        "partner_id": partner_id, "created_at": _now()
+    }
+    db.insert("leads", doc)
+    return doc
 
 @api_router.post("/collaboration/leads")
-async def create_collaboration_lead(lead_data: CollaborationLeadCreate):
-    """Create collaboration/landowner lead"""
-    lead = CollaborationLead(**lead_data.model_dump())
-    doc = lead.model_dump()
-    await db.collaboration_leads.insert_one(doc)
-    return lead
-
-# ===================== SALES LISTINGS (PUBLIC) =====================
+def create_collaboration_lead(lead_data: CollaborationLeadCreate):
+    doc = {
+        "id": _uuid(), "name": lead_data.name, "phone": lead_data.phone,
+        "email": lead_data.email, "land_location": lead_data.land_location,
+        "land_size": lead_data.land_size, "intent": lead_data.intent,
+        "message": lead_data.message, "status": "new", "created_at": _now()
+    }
+    db.insert("collaboration_leads", doc)
+    return doc
 
 @api_router.get("/listings")
-async def get_listings(status: Optional[str] = None, property_type: Optional[str] = None):
-    """Get all public listings"""
-    query = {}
+def get_listings(status: Optional[str] = None, property_type: Optional[str] = None):
+    sql = 'SELECT * FROM listings WHERE 1=1'
+    params = []
     if status:
-        query["status"] = status
+        sql += ' AND status = %s'
+        params.append(status)
     if property_type:
-        query["property_type"] = property_type
-    
-    listings = await db.listings.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
-    return listings
+        sql += ' AND property_type = %s'
+        params.append(property_type)
+    sql += ' ORDER BY created_at DESC'
+    return db.query(sql, params or None)
 
 @api_router.get("/listings/{listing_id}")
-async def get_listing(listing_id: str):
-    """Get single listing details"""
-    listing = await db.listings.find_one({"id": listing_id}, {"_id": 0})
-    if not listing:
+def get_listing(listing_id: str):
+    row = db.query_one('SELECT * FROM listings WHERE id = %s', (listing_id,))
+    if not row:
         raise HTTPException(status_code=404, detail="Listing not found")
-    return listing
-
-# ===================== VENDORS (PUBLIC) =====================
+    return row
 
 @api_router.post("/vendors")
-async def register_vendor(vendor_data: VendorCreate):
-    """Register new vendor"""
-    vendor = Vendor(**vendor_data.model_dump(exclude={"document_data"}))
-    
-    # Handle document upload (base64)
+def register_vendor(vendor_data: VendorCreate):
+    vendor_id = f"VND{random.randint(10000, 99999)}"
+    doc_url = None
     if vendor_data.document_data:
-        vendor.document_url = f"data:application/pdf;base64,{vendor_data.document_data[:100]}..."  # Store reference
-    
-    doc = vendor.model_dump()
-    await db.vendors.insert_one(doc)
-    return {"vendor_id": vendor.vendor_id, "message": "Registration successful"}
-
-# ===================== REFERRAL TERMS (PUBLIC) =====================
+        doc_url = f"data:application/pdf;base64,{vendor_data.document_data[:100]}..."
+    doc = {
+        "id": _uuid(), "vendor_id": vendor_id, "name": vendor_data.name,
+        "company_name": vendor_data.company_name or "", "phone": vendor_data.phone,
+        "email": vendor_data.email or "", "website": vendor_data.website,
+        "categories": vendor_data.categories, "description": vendor_data.description,
+        "document_url": doc_url, "status": "pending", "created_at": _now()
+    }
+    db.insert("vendors", doc)
+    return {"vendor_id": vendor_id, "message": "Registration successful"}
 
 @api_router.get("/referral-terms")
-async def get_referral_terms():
-    """Get public referral terms"""
-    terms = await db.referral_terms.find_one({"id": "referral_terms"}, {"_id": 0})
+def get_referral_terms():
+    terms = db.query_one('SELECT * FROM referral_terms WHERE id = %s', ('referral_terms',))
     if not terms:
-        await seed_referral_terms()
-        terms = await db.referral_terms.find_one({"id": "referral_terms"}, {"_id": 0})
-    return terms
+        seed_referral_terms()
+        terms = db.query_one('SELECT * FROM referral_terms WHERE id = %s', ('referral_terms',))
+    return terms or {}
 
 # ===================== PARTNER AUTH =====================
 
-# In-memory OTP store (mocked)
 otp_store = {}
 
 @api_router.post("/partner/register")
-async def partner_register(data: PartnerRegister):
-    """Register new partner - sends mocked OTP"""
-    existing = await db.partners.find_one({"phone": data.phone})
-    if existing:
+def partner_register(data: PartnerRegister):
+    if db.query_one('SELECT id FROM partners WHERE phone = %s', (data.phone,)):
         raise HTTPException(status_code=400, detail="Phone number already registered")
-    
-    if data.email:
-        email_exists = await db.partners.find_one({"email": data.email})
-        if email_exists:
-            raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Generate mock OTP (always 123456 for testing)
+    if data.email and db.query_one('SELECT id FROM partners WHERE email = %s', (data.email,)):
+        raise HTTPException(status_code=400, detail="Email already registered")
     otp = "123456"
     otp_store[data.phone] = {"otp": otp, "data": data.model_dump(), "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
-    
-    logger.info(f"[MOCK OTP] Sent OTP {otp} to {data.phone}")
     return {"message": "OTP sent to your phone number", "mock_otp": otp}
 
 @api_router.post("/partner/verify-otp")
-async def partner_verify_otp(verify: PartnerOTPVerify):
-    """Verify OTP and create partner account"""
+def partner_verify_otp(verify: PartnerOTPVerify):
     stored = otp_store.get(verify.phone)
     if not stored:
         raise HTTPException(status_code=400, detail="No OTP found. Please register again.")
-    
     if stored["otp"] != verify.otp:
         raise HTTPException(status_code=400, detail="Invalid OTP")
-    
     if datetime.now(timezone.utc) > stored["expires"]:
         del otp_store[verify.phone]
         raise HTTPException(status_code=400, detail="OTP expired. Please register again.")
-    
-    reg_data = stored["data"]
-    
-    # Create partner with the password they chose during registration
-    partner = Partner(
-        name=reg_data["name"],
-        email=reg_data.get("email", ""),
-        phone=reg_data["phone"],
-        password=hash_password(reg_data["password"]),
-        referral_code=generate_referral_code(),
-        is_active=True
-    )
-    
-    await db.partners.insert_one(partner.model_dump())
+    reg = stored["data"]
+    pid = _uuid()
+    ref_code = generate_referral_code()
+    db.insert("partners", {
+        "id": pid, "name": reg["name"], "email": reg.get("email", ""),
+        "phone": reg["phone"], "password": hash_password(reg["password"]),
+        "referral_code": ref_code, "commission_percent": 2.0,
+        "is_active": True, "created_at": _now()
+    })
     del otp_store[verify.phone]
-    
-    token = create_token(reg_data["phone"], role="partner")
+    token = create_token(reg["phone"], role="partner")
     return {
         "message": "Registration successful! Welcome to Alpha Groups Partner Program.",
         "token": token,
-        "partner": {
-            "id": partner.id,
-            "name": partner.name,
-            "email": partner.email,
-            "phone": partner.phone,
-            "referral_code": partner.referral_code
-        }
+        "partner": {"id": pid, "name": reg["name"], "email": reg.get("email", ""), "phone": reg["phone"], "referral_code": ref_code}
     }
 
-# Quick lead capture endpoint (for homepage CTA)
 @api_router.post("/quick-lead")
-async def create_quick_lead(data: QuickLeadCreate):
-    """Quick lead capture from homepage CTA"""
+def create_quick_lead(data: QuickLeadCreate):
     if not data.name or not data.phone:
         raise HTTPException(status_code=400, detail="Name and phone are required")
-    
-    lead = Lead(
-        name=data.name,
-        phone=data.phone,
-        email="",
-        project_type=data.requirement or "general_inquiry",
-        location=data.location,
-        source="homepage_cta"
-    )
-    doc = lead.model_dump()
-    await db.leads.insert_one(doc)
-    return {"message": "Thank you! We'll call you back shortly.", "lead_id": lead.id}
+    lead_id = _uuid()
+    db.insert("leads", {
+        "id": lead_id, "name": data.name, "phone": data.phone, "email": "",
+        "project_type": data.requirement or "general_inquiry",
+        "location": data.location, "source": "homepage_cta", "status": "new",
+        "created_at": _now()
+    })
+    return {"message": "Thank you! We'll call you back shortly.", "lead_id": lead_id}
 
 @api_router.post("/partner/login")
-async def partner_login(creds: PartnerLogin):
-    """Partner login with phone + password"""
-    partner = await db.partners.find_one({"phone": creds.phone}, {"_id": 0})
+def partner_login(creds: PartnerLogin):
+    partner = db.query_one('SELECT * FROM partners WHERE phone = %s', (creds.phone,))
     if not partner:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, partner["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not partner.get("is_active", True):
         raise HTTPException(status_code=403, detail="Account not yet activated. Please contact admin.")
-    
     token = create_token(creds.phone, role="partner")
     return {
         "token": token,
         "partner": {
-            "id": partner["id"],
-            "name": partner["name"],
-            "email": partner.get("email", ""),
-            "phone": partner["phone"],
+            "id": partner["id"], "name": partner["name"],
+            "email": partner.get("email", ""), "phone": partner["phone"],
             "referral_code": partner["referral_code"]
         }
     }
 
 @api_router.post("/partner/login-otp")
-async def partner_login_otp_request(data: PartnerOTPLogin):
-    """Request OTP for login"""
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+def partner_login_otp_request(data: PartnerOTPLogin):
+    partner = db.query_one('SELECT id, is_active FROM partners WHERE phone = %s', (data.phone,))
     if not partner:
         raise HTTPException(status_code=404, detail="No account found with this phone number")
     if not partner.get("is_active", True):
         raise HTTPException(status_code=403, detail="Account not yet activated")
-    
     otp = "123456"
     otp_store[f"login_{data.phone}"] = {"otp": otp, "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
-    logger.info(f"[MOCK OTP] Login OTP {otp} sent to {data.phone}")
     return {"message": "OTP sent to your phone number", "mock_otp": otp}
 
 @api_router.post("/partner/login-otp-verify")
-async def partner_login_otp_verify(data: PartnerOTPLoginVerify):
-    """Verify OTP and login"""
+def partner_login_otp_verify(data: PartnerOTPLoginVerify):
     stored = otp_store.get(f"login_{data.phone}")
     if not stored:
         raise HTTPException(status_code=400, detail="No OTP found. Please request again.")
@@ -784,39 +603,30 @@ async def partner_login_otp_verify(data: PartnerOTPLoginVerify):
     if datetime.now(timezone.utc) > stored["expires"]:
         del otp_store[f"login_{data.phone}"]
         raise HTTPException(status_code=400, detail="OTP expired")
-    
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
+    partner = db.query_one('SELECT * FROM partners WHERE phone = %s', (data.phone,))
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
-    
     del otp_store[f"login_{data.phone}"]
     token = create_token(data.phone, role="partner")
     return {
         "token": token,
         "partner": {
-            "id": partner["id"],
-            "name": partner["name"],
-            "email": partner.get("email", ""),
-            "phone": partner["phone"],
+            "id": partner["id"], "name": partner["name"],
+            "email": partner.get("email", ""), "phone": partner["phone"],
             "referral_code": partner["referral_code"]
         }
     }
 
 @api_router.post("/partner/reset-password")
-async def partner_reset_request(data: PartnerResetRequest):
-    """Request password reset OTP"""
-    partner = await db.partners.find_one({"phone": data.phone}, {"_id": 0})
-    if not partner:
+def partner_reset_request(data: PartnerResetRequest):
+    if not db.query_one('SELECT id FROM partners WHERE phone = %s', (data.phone,)):
         raise HTTPException(status_code=404, detail="No account found with this phone number")
-    
     otp = "123456"
     otp_store[f"reset_{data.phone}"] = {"otp": otp, "expires": datetime.now(timezone.utc) + timedelta(minutes=10)}
-    logger.info(f"[MOCK OTP] Reset OTP {otp} sent to {data.phone}")
     return {"message": "OTP sent to your phone number", "mock_otp": otp}
 
 @api_router.post("/partner/reset-password-confirm")
-async def partner_reset_confirm(data: PartnerResetConfirm):
-    """Confirm password reset with OTP"""
+def partner_reset_confirm(data: PartnerResetConfirm):
     stored = otp_store.get(f"reset_{data.phone}")
     if not stored:
         raise HTTPException(status_code=400, detail="No OTP found. Please request again.")
@@ -825,530 +635,382 @@ async def partner_reset_confirm(data: PartnerResetConfirm):
     if datetime.now(timezone.utc) > stored["expires"]:
         del otp_store[f"reset_{data.phone}"]
         raise HTTPException(status_code=400, detail="OTP expired")
-    
-    new_hash = hash_password(data.new_password)
-    result = await db.partners.update_one({"phone": data.phone}, {"$set": {"password": new_hash}})
-    if result.matched_count == 0:
+    rows = db.execute('UPDATE partners SET password = %s WHERE phone = %s', (hash_password(data.new_password), data.phone))
+    if rows == 0:
         raise HTTPException(status_code=404, detail="Partner not found")
-    
     del otp_store[f"reset_{data.phone}"]
     return {"message": "Password reset successful. You can now login with your new password."}
 
 # ===================== PARTNER DASHBOARD =====================
 
 @api_router.get("/partner/dashboard")
-async def get_partner_dashboard(identifier: str = Depends(verify_partner_token)):
-    """Get partner dashboard data"""
-    partner = await db.partners.find_one(
-        {"$or": [{"phone": identifier}, {"email": identifier}]},
-        {"_id": 0, "password": 0}
-    )
+def get_partner_dashboard(identifier: str = Depends(verify_partner_token)):
+    partner = db.query_one('SELECT * FROM partners WHERE phone = %s OR email = %s', (identifier, identifier))
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
-    
-    referral_code = partner["referral_code"]
-    
-    # Get lead stats
-    total_leads = await db.leads.count_documents({"referral_code": referral_code})
-    new_leads = await db.leads.count_documents({"referral_code": referral_code, "status": "new"})
-    in_progress = await db.leads.count_documents({"referral_code": referral_code, "status": {"$in": ["contacted", "in_progress"]}})
-    converted = await db.leads.count_documents({"referral_code": referral_code, "status": "converted"})
-    
-    # Calculate earnings
-    pipeline = [
-        {"$match": {"referral_code": referral_code, "status": "converted", "referral_earning": {"$exists": True}}},
-        {"$group": {"_id": None, "total": {"$sum": "$referral_earning"}}}
-    ]
-    earnings_result = await db.leads.aggregate(pipeline).to_list(1)
-    total_earnings = earnings_result[0]["total"] if earnings_result else 0
-    
-    # Paid earnings
-    paid_pipeline = [
-        {"$match": {"partner_id": partner["id"], "status": "paid"}},
-        {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
-    ]
-    paid_result = await db.partner_payments.aggregate(paid_pipeline).to_list(1)
-    paid_earnings = paid_result[0]["total"] if paid_result else 0
-    
+    partner.pop("password", None)
+    rc = partner["referral_code"]
+
+    total_leads = db.count('SELECT COUNT(*) FROM leads WHERE referral_code = %s', (rc,))
+    new_leads = db.count('SELECT COUNT(*) FROM leads WHERE referral_code = %s AND status = %s', (rc, "new"))
+    in_progress = db.count("SELECT COUNT(*) FROM leads WHERE referral_code = %s AND status IN ('contacted','in_progress')", (rc,))
+    converted = db.count('SELECT COUNT(*) FROM leads WHERE referral_code = %s AND status = %s', (rc, "converted"))
+
+    earnings_rows = db.query('SELECT referral_earning FROM leads WHERE referral_code = %s AND status = %s AND referral_earning IS NOT NULL', (rc, "converted"))
+    total_earnings = sum(float(r["referral_earning"]) for r in earnings_rows)
+
+    paid_rows = db.query('SELECT amount FROM partner_payments WHERE partner_id = %s AND status = %s', (partner["id"], "paid"))
+    paid_earnings = sum(float(r["amount"]) for r in paid_rows)
+
     return {
         "partner": partner,
         "stats": {
-            "total_leads": total_leads,
-            "new_leads": new_leads,
-            "in_progress": in_progress,
-            "converted": converted,
-            "total_earnings": total_earnings,
-            "paid_earnings": paid_earnings,
+            "total_leads": total_leads, "new_leads": new_leads,
+            "in_progress": in_progress, "converted": converted,
+            "total_earnings": total_earnings, "paid_earnings": paid_earnings,
             "pending_earnings": total_earnings - paid_earnings
         }
     }
 
 @api_router.get("/partner/leads")
-async def get_partner_leads(identifier: str = Depends(verify_partner_token)):
-    """Get partner's referred leads"""
-    partner = await db.partners.find_one(
-        {"$or": [{"phone": identifier}, {"email": identifier}]},
-        {"_id": 0}
-    )
+def get_partner_leads(identifier: str = Depends(verify_partner_token)):
+    partner = db.query_one('SELECT referral_code FROM partners WHERE phone = %s OR email = %s', (identifier, identifier))
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
-    
-    leads = await db.leads.find(
-        {"referral_code": partner["referral_code"]},
-        {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
-    
-    return leads
+    return db.query('SELECT * FROM leads WHERE referral_code = %s ORDER BY created_at DESC', (partner["referral_code"],))
 
 @api_router.get("/partner/materials")
-async def get_partner_materials(identifier: str = Depends(verify_partner_token)):
-    """Get marketing materials for partner"""
-    materials = await db.marketing_materials.find({}, {"_id": 0}).to_list(50)
-    return materials
+def get_partner_materials(identifier: str = Depends(verify_partner_token)):
+    return db.query('SELECT * FROM marketing_materials')
 
 # ===================== ADMIN AUTH =====================
 
 @api_router.post("/admin/login")
-async def admin_login(creds: AdminLogin):
-    """Admin login"""
-    admin = await db.admins.find_one({"email": creds.email}, {"_id": 0})
+def admin_login(creds: AdminLogin):
+    admin = db.query_one('SELECT * FROM admins WHERE email = %s', (creds.email,))
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not verify_password(creds.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
     token = create_token(creds.email, role="admin")
     return {"token": token, "email": admin["email"], "name": admin["name"]}
 
 @api_router.post("/admin/register")
-async def admin_register(admin_data: AdminCreate):
-    """Register admin (first-time setup only)"""
-    existing = await db.admins.find_one({"email": admin_data.email})
-    if existing:
+def admin_register(admin_data: AdminCreate):
+    if db.query_one('SELECT id FROM admins WHERE email = %s', (admin_data.email,)):
         raise HTTPException(status_code=400, detail="Admin already exists")
-
     admin_dict = {
-        "id": str(uuid.uuid4()),
-        "email": admin_data.email,
+        "id": _uuid(), "email": admin_data.email,
         "password": hash_password(admin_data.password),
-        "name": admin_data.name,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "name": admin_data.name, "created_at": _now()
     }
-    await db.admins.insert_one(doc)
+    db.insert("admins", admin_dict)
     token = create_token(admin_data.email, role="admin")
-    return {"token": token, "email": doc["email"], "name": doc["name"]}
+    return {"token": token, "email": admin_dict["email"], "name": admin_dict["name"]}
 
 @api_router.get("/admin/me")
-async def get_admin_profile(email: str = Depends(verify_admin_token)):
-    """Get admin profile"""
-    admin = await db.admins.find_one({"email": email}, {"_id": 0, "password": 0})
+def get_admin_profile(email: str = Depends(verify_admin_token)):
+    admin = db.query_one('SELECT id, name, email, role, created_at FROM admins WHERE email = %s', (email,))
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
-    
-    # Remove password from response
-    admin.pop("password", None)
     return admin
 
 # ===================== ADMIN - LEADS =====================
 
-@api_router.get("/admin/leads", response_model=List[Lead])
-async def get_all_leads(
-    status: Optional[str] = None,
-    source: Optional[str] = None,
-    email: str = Depends(verify_admin_token)
-):
-    """Get all leads"""
-    query = {}
+@api_router.get("/admin/leads")
+def get_all_leads(status: Optional[str] = None, source: Optional[str] = None, email: str = Depends(verify_admin_token)):
+    sql = 'SELECT * FROM leads WHERE 1=1'
+    params = []
     if status:
-        query = query.eq("status", status)
+        sql += ' AND status = %s'
+        params.append(status)
     if source:
-        query = query.eq("source", source)
-    
-    result = query.order("created_at", desc=True).execute()
-    return [Lead(**lead) for lead in result.data]
+        sql += ' AND source = %s'
+        params.append(source)
+    sql += ' ORDER BY created_at DESC'
+    return db.query(sql, params or None)
 
 @api_router.get("/admin/leads/{lead_id}")
-async def get_lead(lead_id: str, email: str = Depends(verify_admin_token)):
-    """Get single lead"""
-    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+def get_lead(lead_id: str, email: str = Depends(verify_admin_token)):
+    lead = db.query_one('SELECT * FROM leads WHERE id = %s', (lead_id,))
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    return Lead(**lead)
+    return lead
 
 @api_router.patch("/admin/leads/{lead_id}")
-async def update_lead(lead_id: str, update: LeadUpdate, email: str = Depends(verify_admin_token)):
-    """Update lead status and deal value"""
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    
-    # Calculate referral earning if deal_value is set and lead has partner
+def update_lead(lead_id: str, update_body: LeadUpdate, email: str = Depends(verify_admin_token)):
+    update_data = {k: v for k, v in update_body.model_dump().items() if v is not None}
     if "deal_value" in update_data:
-        lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+        lead = db.query_one('SELECT partner_id FROM leads WHERE id = %s', (lead_id,))
         if lead and lead.get("partner_id"):
-            partner = await db.partners.find_one({"id": lead["partner_id"]}, {"_id": 0})
-            if partner:
-                commission = partner.get("commission_percent", 2.0)
-                update_data["referral_earning"] = update_data["deal_value"] * (commission / 100)
-    
-    result = await db.leads.update_one({"id": lead_id}, {"$set": update_data})
-    if result.matched_count == 0:
+            p = db.query_one('SELECT commission_percent FROM partners WHERE id = %s', (lead["partner_id"],))
+            if p:
+                update_data["referral_earning"] = update_data["deal_value"] * (p.get("commission_percent", 2.0) / 100)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    rows = db.update("leads", update_data, "id", lead_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Lead not found")
-
-    return Lead(**result.data[0])
+    return rows[0]
 
 @api_router.delete("/admin/leads/{lead_id}")
-async def delete_lead(lead_id: str, email: str = Depends(verify_admin_token)):
-    """Delete lead"""
-    result = await db.leads.delete_one({"id": lead_id})
-    if result.deleted_count == 0:
+def delete_lead(lead_id: str, email: str = Depends(verify_admin_token)):
+    rows = db.delete("leads", "id", lead_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted"}
 
 # ===================== ADMIN - PACKAGES =====================
 
 @api_router.get("/admin/packages")
-async def admin_get_packages(email: str = Depends(verify_admin_token)):
-    """Get all packages for admin"""
-    configs = await db.package_configs.find({}, {"_id": 0}).sort("order", 1).to_list(10)
-    features = await db.package_features.find({}, {"_id": 0}).sort("order", 1).to_list(100)
+def admin_get_packages(email: str = Depends(verify_admin_token)):
+    configs = db.query('SELECT * FROM package_configs ORDER BY "order" ASC')
+    features = db.query('SELECT * FROM package_features ORDER BY "order" ASC')
     return {"configs": configs, "features": features}
 
 @api_router.patch("/admin/packages/{package_name}")
-async def update_package_config(package_name: str, update: PackageConfigUpdate, email: str = Depends(verify_admin_token)):
-    """Update package configuration"""
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.package_configs.update_one({"name": package_name}, {"$set": update_data})
-    if result.matched_count == 0:
+def update_package_config(package_name: str, update_body: PackageConfigUpdate, email: str = Depends(verify_admin_token)):
+    update_data = {k: v for k, v in update_body.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data")
+    rows = db.update("package_configs", update_data, "name", package_name)
+    if not rows:
         raise HTTPException(status_code=404, detail="Package not found")
     return {"message": "Package updated"}
 
 @api_router.post("/admin/packages/features")
-async def add_package_feature(feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
-    """Add new package feature"""
-    feature_doc = PackageFeature(**feature.model_dump())
-    await db.package_features.insert_one(feature_doc.model_dump())
-    return feature_doc
+def add_package_feature(feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
+    doc = {"id": _uuid(), **feature.model_dump()}
+    db.insert("package_features", doc)
+    return doc
 
 @api_router.patch("/admin/packages/features/{feature_id}")
-async def update_package_feature(feature_id: str, feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
-    """Update package feature"""
-    update_data = feature.model_dump()
-    result = await db.package_features.update_one({"id": feature_id}, {"$set": update_data})
-    if result.matched_count == 0:
+def update_package_feature(feature_id: str, feature: PackageFeatureCreate, email: str = Depends(verify_admin_token)):
+    rows = db.update("package_features", feature.model_dump(), "id", feature_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature updated"}
 
 @api_router.delete("/admin/packages/features/{feature_id}")
-async def delete_package_feature(feature_id: str, email: str = Depends(verify_admin_token)):
-    """Delete package feature"""
-    result = await db.package_features.delete_one({"id": feature_id})
-    if result.deleted_count == 0:
+def delete_package_feature(feature_id: str, email: str = Depends(verify_admin_token)):
+    rows = db.delete("package_features", "id", feature_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Feature not found")
     return {"message": "Feature deleted"}
 
 # ===================== ADMIN - PARTNERS =====================
 
 @api_router.get("/admin/partners")
-async def get_all_partners(email: str = Depends(verify_admin_token)):
-    """Get all partners"""
-    partners = await db.partners.find({}, {"_id": 0, "password": 0}).to_list(100)
-    return partners
+def get_all_partners(email: str = Depends(verify_admin_token)):
+    return db.query('SELECT id, name, email, phone, referral_code, commission_percent, account_manager, is_active, created_at FROM partners ORDER BY created_at DESC')
 
 @api_router.post("/admin/partners")
-async def create_partner(partner_data: PartnerCreate, email: str = Depends(verify_admin_token)):
-    """Create new partner account"""
-    existing = await db.partners.find_one({"email": partner_data.email})
-    if existing:
+def create_partner(partner_data: PartnerCreate, email: str = Depends(verify_admin_token)):
+    if db.query_one('SELECT id FROM partners WHERE email = %s', (partner_data.email,)):
         raise HTTPException(status_code=400, detail="Partner email already exists")
-    
-    partner = Partner(
-        name=partner_data.name,
-        email=partner_data.email,
-        phone=partner_data.phone,
-        password=hash_password(partner_data.password),
-        referral_code=generate_referral_code(),
-        commission_percent=partner_data.commission_percent
-    )
-    
-    await db.partners.insert_one(partner.model_dump())
-    return {
-        "id": partner.id,
-        "name": partner.name,
-        "email": partner.email,
-        "referral_code": partner.referral_code
-    }
+    pid = _uuid()
+    ref_code = generate_referral_code()
+    db.insert("partners", {
+        "id": pid, "name": partner_data.name, "email": partner_data.email,
+        "phone": partner_data.phone, "password": hash_password(partner_data.password),
+        "referral_code": ref_code, "commission_percent": partner_data.commission_percent,
+        "is_active": True, "created_at": _now()
+    })
+    return {"id": pid, "name": partner_data.name, "email": partner_data.email, "referral_code": ref_code}
 
 @api_router.patch("/admin/partners/{partner_id}")
-async def update_partner(partner_id: str, update: PartnerUpdate, email: str = Depends(verify_admin_token)):
-    """Update partner"""
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.partners.update_one({"id": partner_id}, {"$set": update_data})
-    if result.matched_count == 0:
+def update_partner(partner_id: str, update_body: PartnerUpdate, email: str = Depends(verify_admin_token)):
+    data = {k: v for k, v in update_body.model_dump().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="No update data")
+    rows = db.update("partners", data, "id", partner_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner updated"}
 
 @api_router.delete("/admin/partners/{partner_id}")
-async def delete_partner(partner_id: str, email: str = Depends(verify_admin_token)):
-    """Delete partner"""
-    result = await db.partners.delete_one({"id": partner_id})
-    if result.deleted_count == 0:
+def delete_partner(partner_id: str, email: str = Depends(verify_admin_token)):
+    rows = db.delete("partners", "id", partner_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Partner not found")
     return {"message": "Partner deleted"}
 
 # ===================== ADMIN - COLLABORATION LEADS =====================
 
 @api_router.get("/admin/collaboration/leads")
-async def get_collaboration_leads(email: str = Depends(verify_admin_token)):
-    """Get all collaboration leads"""
-    leads = await db.collaboration_leads.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return leads
+def get_collaboration_leads(email: str = Depends(verify_admin_token)):
+    return db.query('SELECT * FROM collaboration_leads ORDER BY created_at DESC')
 
 @api_router.patch("/admin/collaboration/leads/{lead_id}")
-async def update_collaboration_lead(lead_id: str, status: str, email: str = Depends(verify_admin_token)):
-    """Update collaboration lead status"""
-    result = await db.collaboration_leads.update_one({"id": lead_id}, {"$set": {"status": status}})
-    if result.matched_count == 0:
+def update_collaboration_lead(lead_id: str, status: str, email: str = Depends(verify_admin_token)):
+    rows = db.update("collaboration_leads", {"status": status}, "id", lead_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead updated"}
 
 # ===================== ADMIN - LISTINGS =====================
 
 @api_router.get("/admin/listings")
-async def admin_get_listings(email: str = Depends(verify_admin_token)):
-    """Get all listings for admin"""
-    listings = await db.listings.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
-    return listings
+def admin_get_listings(email: str = Depends(verify_admin_token)):
+    return db.query('SELECT * FROM listings ORDER BY created_at DESC')
 
 @api_router.post("/admin/listings")
-async def create_listing(listing_data: SalesListingCreate, email: str = Depends(verify_admin_token)):
-    """Create new listing"""
-    listing = SalesListing(**listing_data.model_dump())
-    await db.listings.insert_one(listing.model_dump())
-    return listing
+def create_listing(listing_data: SalesListingCreate, email: str = Depends(verify_admin_token)):
+    doc = {"id": _uuid(), **listing_data.model_dump(), "created_at": _now()}
+    db.insert("listings", doc)
+    return doc
 
 @api_router.patch("/admin/listings/{listing_id}")
-async def update_listing(listing_id: str, update: SalesListingUpdate, email: str = Depends(verify_admin_token)):
-    """Update listing"""
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    result = await db.listings.update_one({"id": listing_id}, {"$set": update_data})
-    if result.matched_count == 0:
+def update_listing(listing_id: str, update_body: SalesListingUpdate, email: str = Depends(verify_admin_token)):
+    data = {k: v for k, v in update_body.model_dump().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="No update data")
+    rows = db.update("listings", data, "id", listing_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing updated"}
 
 @api_router.delete("/admin/listings/{listing_id}")
-async def delete_listing(listing_id: str, email: str = Depends(verify_admin_token)):
-    """Delete listing"""
-    result = await db.listings.delete_one({"id": listing_id})
-    if result.deleted_count == 0:
+def delete_listing(listing_id: str, email: str = Depends(verify_admin_token)):
+    rows = db.delete("listings", "id", listing_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Listing not found")
     return {"message": "Listing deleted"}
 
 # ===================== ADMIN - VENDORS =====================
 
 @api_router.get("/admin/vendors")
-async def get_all_vendors(email: str = Depends(verify_admin_token)):
-    """Get all vendors"""
-    vendors = await db.vendors.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return vendors
+def get_all_vendors(email: str = Depends(verify_admin_token)):
+    return db.query('SELECT * FROM vendors ORDER BY created_at DESC')
 
 @api_router.patch("/admin/vendors/{vendor_id}")
-async def update_vendor_status(vendor_id: str, status: str, email: str = Depends(verify_admin_token)):
-    """Update vendor status"""
-    result = await db.vendors.update_one({"id": vendor_id}, {"$set": {"status": status}})
-    if result.matched_count == 0:
+def update_vendor_status(vendor_id: str, status: str, email: str = Depends(verify_admin_token)):
+    rows = db.update("vendors", {"status": status}, "id", vendor_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Vendor not found")
     return {"message": "Vendor updated"}
 
 # ===================== ADMIN - REFERRAL TERMS =====================
 
 @api_router.patch("/admin/referral-terms")
-async def update_referral_terms(terms: ReferralTerms, email: str = Depends(verify_admin_token)):
-    """Update referral terms"""
-    terms.updated_at = datetime.now(timezone.utc).isoformat()
-    await db.referral_terms.update_one(
-        {"id": "referral_terms"},
-        {"$set": terms.model_dump()},
-        upsert=True
-    )
+def update_referral_terms(terms: ReferralTerms, email: str = Depends(verify_admin_token)):
+    terms.updated_at = _now()
+    data = terms.model_dump()
+    existing = db.query_one('SELECT id FROM referral_terms WHERE id = %s', ('referral_terms',))
+    if existing:
+        db.update("referral_terms", data, "id", "referral_terms")
+    else:
+        db.insert("referral_terms", data)
     return {"message": "Terms updated"}
 
 # ===================== ADMIN - MARKETING MATERIALS =====================
 
 @api_router.get("/admin/materials")
-async def get_materials(email: str = Depends(verify_admin_token)):
-    """Get all marketing materials"""
-    materials = await db.marketing_materials.find({}, {"_id": 0}).to_list(50)
-    return materials
+def get_materials(email: str = Depends(verify_admin_token)):
+    return db.query('SELECT * FROM marketing_materials')
 
 @api_router.post("/admin/materials")
-async def add_material(data: dict, email: str = Depends(verify_admin_token)):
-    """Add marketing material"""
-    material = MarketingMaterial(
-        title=data.get("title", ""),
-        description=data.get("description", ""),
-        file_url=data.get("file_url", ""),
-        file_type=data.get("file_type", "pdf")
-    )
-    await db.marketing_materials.insert_one(material.model_dump())
-    return {"id": material.id, "message": "Material added successfully"}
+def add_material(data: dict, email: str = Depends(verify_admin_token)):
+    mid = _uuid()
+    doc = {
+        "id": mid, "title": data.get("title", ""),
+        "description": data.get("description", ""),
+        "file_url": data.get("file_url", ""),
+        "file_type": data.get("file_type", "pdf"),
+        "created_at": _now()
+    }
+    db.insert("marketing_materials", doc)
+    return {"id": mid, "message": "Material added successfully"}
 
 @api_router.delete("/admin/materials/{material_id}")
-async def delete_material(material_id: str, email: str = Depends(verify_admin_token)):
-    """Delete marketing material"""
-    result = await db.marketing_materials.delete_one({"id": material_id})
-    if result.deleted_count == 0:
+def delete_material(material_id: str, email: str = Depends(verify_admin_token)):
+    rows = db.delete("marketing_materials", "id", material_id)
+    if not rows:
         raise HTTPException(status_code=404, detail="Material not found")
     return {"message": "Material deleted"}
 
 # ===================== ADMIN - FEATURE REORDER =====================
 
 @api_router.post("/admin/packages/features/reorder")
-async def reorder_features(data: dict, email: str = Depends(verify_admin_token)):
-    """Reorder package features"""
-    feature_orders = data.get("feature_orders", [])  # [{id: "xxx", order: 1}, ...]
-    for item in feature_orders:
-        await db.package_features.update_one(
-            {"id": item["id"]},
-            {"$set": {"order": item["order"]}}
-        )
+def reorder_features(data: dict, email: str = Depends(verify_admin_token)):
+    for item in data.get("feature_orders", []):
+        db.execute('UPDATE package_features SET "order" = %s WHERE id = %s', (item["order"], item["id"]))
     return {"message": "Features reordered successfully"}
 
 # ===================== ADMIN - PARTNER ANALYTICS =====================
 
 @api_router.get("/admin/partners/{partner_id}/analytics")
-async def get_partner_analytics(partner_id: str, email: str = Depends(verify_admin_token)):
-    """Get analytics for a specific partner"""
-    partner = await db.partners.find_one({"id": partner_id}, {"_id": 0, "password": 0})
+def get_partner_analytics(partner_id: str, email: str = Depends(verify_admin_token)):
+    partner = db.query_one('SELECT id, name, phone, email, referral_code, is_active, commission_percent, created_at FROM partners WHERE id = %s', (partner_id,))
     if not partner:
         raise HTTPException(status_code=404, detail="Partner not found")
-    
-    referral_code = partner.get("referral_code", "")
-    
-    # Get leads referred by this partner
-    all_leads = await db.leads.find(
-        {"referral_code": referral_code},
-        {"_id": 0}
-    ).to_list(200)
-    
-    total_leads = len(all_leads)
-    new_leads = sum(1 for l in all_leads if l.get("status") == "new")
-    contacted_leads = sum(1 for l in all_leads if l.get("status") == "contacted")
-    converted_leads = sum(1 for l in all_leads if l.get("status") == "converted")
-    lost_leads = sum(1 for l in all_leads if l.get("status") == "lost")
-    
+    rc = partner.get("referral_code", "")
+    all_leads = db.query('SELECT * FROM leads WHERE referral_code = %s', (rc,))
+    total = len(all_leads)
+    new = sum(1 for l in all_leads if l.get("status") == "new")
+    contacted = sum(1 for l in all_leads if l.get("status") == "contacted")
+    conv = sum(1 for l in all_leads if l.get("status") == "converted")
+    lost = sum(1 for l in all_leads if l.get("status") == "lost")
     return {
-        "partner": {
-            "id": partner["id"],
-            "name": partner["name"],
-            "phone": partner.get("phone", ""),
-            "email": partner.get("email", ""),
-            "referral_code": referral_code,
-            "is_active": partner.get("is_active", False),
-            "commission_percent": partner.get("commission_percent", 2),
-            "created_at": partner.get("created_at", "")
-        },
-        "leads": {
-            "total": total_leads,
-            "new": new_leads,
-            "contacted": contacted_leads,
-            "converted": converted_leads,
-            "lost": lost_leads,
-            "conversion_rate": round((converted_leads / total_leads * 100), 1) if total_leads > 0 else 0
-        },
-        "recent_leads": all_leads[:10]  # Last 10 leads
+        "partner": partner,
+        "leads": {"total": total, "new": new, "contacted": contacted, "converted": conv, "lost": lost,
+                  "conversion_rate": round((conv / total * 100), 1) if total > 0 else 0},
+        "recent_leads": all_leads[:10]
     }
 
 @api_router.get("/admin/partners-analytics")
-async def get_all_partners_analytics(email: str = Depends(verify_admin_token)):
-    """Get analytics summary for all partners"""
-    partners = await db.partners.find({}, {"_id": 0, "password": 0}).to_list(200)
-    
+def get_all_partners_analytics(email: str = Depends(verify_admin_token)):
+    partners = db.query('SELECT id, name, phone, email, referral_code, is_active, commission_percent FROM partners')
     result = []
-    for partner in partners:
-        referral_code = partner.get("referral_code", "")
-        leads = await db.leads.find({"referral_code": referral_code}, {"_id": 0}).to_list(200)
-        
+    for p in partners:
+        rc = p.get("referral_code", "")
+        leads = db.query('SELECT status FROM leads WHERE referral_code = %s', (rc,))
         total = len(leads)
-        converted = sum(1 for l in leads if l.get("status") == "converted")
-        
+        conv = sum(1 for l in leads if l.get("status") == "converted")
         result.append({
-            "id": partner["id"],
-            "name": partner["name"],
-            "phone": partner.get("phone", ""),
-            "email": partner.get("email", ""),
-            "referral_code": referral_code,
-            "is_active": partner.get("is_active", False),
-            "commission_percent": partner.get("commission_percent", 2),
+            "id": p["id"], "name": p["name"], "phone": p.get("phone", ""),
+            "email": p.get("email", ""), "referral_code": rc,
+            "is_active": p.get("is_active", False),
+            "commission_percent": p.get("commission_percent", 2),
             "total_leads": total,
             "new_leads": sum(1 for l in leads if l.get("status") == "new"),
             "contacted_leads": sum(1 for l in leads if l.get("status") == "contacted"),
-            "converted_leads": converted,
+            "converted_leads": conv,
             "lost_leads": sum(1 for l in leads if l.get("status") == "lost"),
-            "conversion_rate": round((converted / total * 100), 1) if total > 0 else 0
+            "conversion_rate": round((conv / total * 100), 1) if total > 0 else 0
         })
-    
     return result
 
 # ===================== ADMIN - ANALYTICS =====================
 
 @api_router.get("/admin/analytics")
-async def get_analytics(email: str = Depends(verify_admin_token)):
-    """Get dashboard analytics"""
-    total_leads = await db.leads.count_documents({})
-    new_leads = await db.leads.count_documents({"status": "new"})
-    contacted_leads = await db.leads.count_documents({"status": "contacted"})
-    converted_leads = await db.leads.count_documents({"status": "converted"})
-    
-    # Source breakdown
-    website_leads = await db.leads.count_documents({"source": "website"})
-    calculator_leads = await db.leads.count_documents({"source": "calculator"})
-    referral_leads = await db.leads.count_documents({"referral_code": {"$exists": True, "$ne": None}})
-    
-    # Collaboration leads
-    collab_leads = await db.collaboration_leads.count_documents({})
-    
-    # Vendors
-    total_vendors = await db.vendors.count_documents({})
-    pending_vendors = await db.vendors.count_documents({"status": "pending"})
-    
-    # Partners
-    total_partners = await db.partners.count_documents({})
-    active_partners = await db.partners.count_documents({"is_active": True})
-    
-    # Listings
-    total_listings = await db.listings.count_documents({})
-    available_listings = await db.listings.count_documents({"status": "available"})
-    
+def get_analytics(email: str = Depends(verify_admin_token)):
+    total_leads = db.count('SELECT COUNT(*) FROM leads')
+    new_leads = db.count('SELECT COUNT(*) FROM leads WHERE status = %s', ('new',))
+    contacted = db.count('SELECT COUNT(*) FROM leads WHERE status = %s', ('contacted',))
+    converted = db.count('SELECT COUNT(*) FROM leads WHERE status = %s', ('converted',))
+    website = db.count('SELECT COUNT(*) FROM leads WHERE source = %s', ('website',))
+    calculator = db.count('SELECT COUNT(*) FROM leads WHERE source = %s', ('calculator',))
+    referral = db.count("SELECT COUNT(*) FROM leads WHERE referral_code IS NOT NULL AND referral_code != ''")
+    collab = db.count('SELECT COUNT(*) FROM collaboration_leads')
+    total_vendors = db.count('SELECT COUNT(*) FROM vendors')
+    pending_vendors = db.count('SELECT COUNT(*) FROM vendors WHERE status = %s', ('pending',))
+    total_partners = db.count('SELECT COUNT(*) FROM partners')
+    active_partners = db.count('SELECT COUNT(*) FROM partners WHERE is_active = true')
+    total_listings = db.count('SELECT COUNT(*) FROM listings')
+    avail_listings = db.count('SELECT COUNT(*) FROM listings WHERE status = %s', ('available',))
     return {
-        "leads": {
-            "total": total_leads,
-            "new": new_leads,
-            "contacted": contacted_leads,
-            "converted": converted_leads,
-            "conversion_rate": (converted_leads / total_leads * 100) if total_leads > 0 else 0
-        },
-        "sources": {
-            "website": website_leads,
-            "calculator": calculator_leads,
-            "referral": referral_leads
-        },
-        "collaboration": {
-            "total": collab_leads
-        },
-        "vendors": {
-            "total": total_vendors,
-            "pending": pending_vendors
-        },
-        "partners": {
-            "total": total_partners,
-            "active": active_partners
-        },
-        "listings": {
-            "total": total_listings,
-            "available": available_listings
-        }
+        "leads": {"total": total_leads, "new": new_leads, "contacted": contacted, "converted": converted,
+                  "conversion_rate": round((converted / total_leads * 100), 1) if total_leads > 0 else 0},
+        "sources": {"website": website, "calculator": calculator, "referral": referral},
+        "collaboration": {"total": collab},
+        "vendors": {"total": total_vendors, "pending": pending_vendors},
+        "partners": {"total": total_partners, "active": active_partners},
+        "listings": {"total": total_listings, "available": avail_listings}
     }
 
-# Include router and middleware
+# ===================== INCLUDE ROUTER & MIDDLEWARE =====================
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1358,13 +1020,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
