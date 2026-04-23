@@ -349,7 +349,6 @@ def seed_demo_admin():
             "name": "Alpha Admin",
             "email": "test@alpha.com",
             "password": hash_password("password123"),
-            "role": "admin",
             "created_at": _now()
         })
         logger.info("Demo admin seeded")
@@ -710,7 +709,7 @@ def admin_register(admin_data: AdminCreate):
 
 @api_router.get("/admin/me")
 def get_admin_profile(email: str = Depends(verify_admin_token)):
-    admin = db.query_one('SELECT id, name, email, role, created_at FROM admins WHERE email = %s', (email,))
+    admin = db.query_one('SELECT id, name, email, created_at FROM admins WHERE email = %s', (email,))
     if not admin:
         raise HTTPException(status_code=404, detail="Admin not found")
     return admin

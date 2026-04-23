@@ -1,150 +1,166 @@
-"""Database module using psycopg2 for direct PostgreSQL access to Supabase."""
-import psycopg2
-import psycopg2.pool
-import psycopg2.extras
-from psycopg2.extras import Json, RealDictCursor
+"""Database module using Supabase REST API."""
 import os
 import logging
-from datetime import datetime, date
+import re
+from supabase import create_client, Client
 
 logger = logging.getLogger(__name__)
 
-_pool = None
+_client = None
 
+def get_client() -> Client:
+    global _client
+    if _client is None:
+        url = os.environ.get('SUPABASE_URL')
+        key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or os.environ.get('SUPABASE_ANON_KEY')
+        if not url or not key:
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
+        _client = create_client(url, key)
+        logger.info("Supabase REST client initialized")
+    return _client
 
-def get_pool():
-    global _pool
-    if _pool is None:
-        dsn = os.environ.get('POSTGRES_URL')
-        _pool = psycopg2.pool.ThreadedConnectionPool(minconn=2, maxconn=10, dsn=dsn)
-        logger.info("Database connection pool created")
-    return _pool
+def _parse_select(sql, params):
+    client = get_client()
+    sql = sql.replace('"', '')
+    
+    # COUNT query
+    if 'SELECT COUNT(*)' in sql.upper():
+        match = re.search(r'FROM\s+(\w+)(?:\s+WHERE\s+(.+))?', sql, re.IGNORECASE)
+        if not match:
+            return 0
+        table = match.group(1)
+        where_clause = match.group(2)
+        
+        req = client.table(table).select('*', count='exact')
+        
+        if where_clause:
+            # handle simple AND conditions
+            conditions = re.split(r'\s+AND\s+', where_clause, flags=re.IGNORECASE)
+            param_idx = 0
+            for cond in conditions:
+                cond = cond.strip()
+                if 'IN (' in cond.upper():
+                    # e.g. status IN ('contacted','in_progress')
+                    col = cond.split('IN')[0].strip()
+                    vals = re.search(r'\((.*?)\)', cond).group(1)
+                    vals_list = [v.strip("' ") for v in vals.split(',')]
+                    req = req.in_(col, vals_list)
+                elif 'IS NOT NULL' in cond.upper():
+                    col = cond.replace('IS NOT NULL', '').strip()
+                    req = req.not_is(col, "null")
+                elif '!=' in cond:
+                    col, val = [x.strip() for x in cond.split('!=')]
+                    if val == "''":
+                        req = req.neq(col, '')
+                    else:
+                        req = req.neq(col, params[param_idx] if params else val)
+                        param_idx += 1
+                elif '=' in cond:
+                    col, val = [x.strip() for x in cond.split('=')]
+                    if val == '%s':
+                        req = req.eq(col, params[param_idx])
+                        param_idx += 1
+                    else:
+                        req = req.eq(col, val.strip("' "))
+        res = req.execute()
+        return res.count if res.count is not None else len(res.data)
 
-
-def _serialize_value(v):
-    if isinstance(v, datetime):
-        return v.isoformat()
-    if isinstance(v, date):
-        return v.isoformat()
-    return v
-
-
-def _serialize_row(row):
-    if row is None:
-        return None
-    return {k: _serialize_value(v) for k, v in row.items()}
-
+    # SELECT query
+    match = re.search(r'SELECT\s+(.+?)\s+FROM\s+(\w+)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(.+?)\s+(ASC|DESC))?$', sql, re.IGNORECASE)
+    if not match:
+        raise ValueError(f"Could not parse SQL: {sql}")
+    
+    select_cols = match.group(1).strip()
+    table = match.group(2).strip()
+    where_clause = match.group(3)
+    order_col = match.group(4)
+    order_dir = match.group(5)
+    
+    req = client.table(table).select(select_cols)
+    
+    if where_clause:
+        conditions = re.split(r'\s+AND\s+|\s+OR\s+', where_clause, flags=re.IGNORECASE)
+        # Note: Or is tricky. We'll simplify: if 'OR' is in where_clause, we use .or_()
+        if ' OR ' in where_clause.upper():
+            # e.g. phone = %s OR email = %s
+            or_conds = []
+            param_idx = 0
+            for cond in conditions:
+                if '=' in cond:
+                    col = cond.split('=')[0].strip()
+                    or_conds.append(f"{col}.eq.{params[param_idx]}")
+                    param_idx += 1
+            req = req.or_(','.join(or_conds))
+        else:
+            param_idx = 0
+            for cond in conditions:
+                if 'IS NOT NULL' in cond.upper():
+                    col = cond.replace('IS NOT NULL', '').strip()
+                    req = req.not_is(col, "null")
+                elif '=' in cond:
+                    col, val = [x.strip() for x in cond.split('=')]
+                    if val == '%s':
+                        req = req.eq(col, params[param_idx])
+                        param_idx += 1
+                    else:
+                        req = req.eq(col, val.strip("' "))
+                        
+    if order_col:
+        req = req.order(order_col.strip(), desc=(order_dir.upper() == 'DESC'))
+        
+    return req.execute().data
 
 def query(sql, params=None):
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            rows = cur.fetchall()
-            return [_serialize_row(dict(r)) for r in rows]
-    finally:
-        pool.putconn(conn)
-
+    return _parse_select(sql, params)
 
 def query_one(sql, params=None):
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            row = cur.fetchone()
-            return _serialize_row(dict(row)) if row else None
-    finally:
-        pool.putconn(conn)
-
-
-def execute(sql, params=None):
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            conn.commit()
-            return cur.rowcount
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        pool.putconn(conn)
-
-
-def execute_returning(sql, params=None):
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(sql, params)
-            conn.commit()
-            rows = cur.fetchall()
-            return [_serialize_row(dict(r)) for r in rows]
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        pool.putconn(conn)
-
+    data = _parse_select(sql, params)
+    return data[0] if data else None
 
 def count(sql, params=None):
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(sql, params)
-            result = cur.fetchone()
-            return result[0] if result else 0
-    finally:
-        pool.putconn(conn)
+    return _parse_select(sql, params)
 
-
-def _prep_value(v):
-    if isinstance(v, (list, dict)):
-        return Json(v)
-    return v
-
+def execute(sql, params=None):
+    client = get_client()
+    sql = sql.replace('"', '')
+    if 'UPDATE' in sql.upper():
+        match = re.search(r'UPDATE\s+(\w+)\s+SET\s+(.+?)\s+WHERE\s+(.+)', sql, re.IGNORECASE)
+        if match:
+            table = match.group(1)
+            set_clause = match.group(2)
+            where_clause = match.group(3)
+            
+            # e.g. "password = %s" or "order = %s"
+            set_cols = [x.split('=')[0].strip() for x in set_clause.split(',')]
+            update_data = {}
+            param_idx = 0
+            for col in set_cols:
+                update_data[col] = params[param_idx]
+                param_idx += 1
+                
+            req = client.table(table).update(update_data)
+            
+            # where clause e.g. email = %s
+            where_col = where_clause.split('=')[0].strip()
+            req = req.eq(where_col, params[param_idx])
+            
+            return len(req.execute().data)
+    raise NotImplementedError(f"Execute parsing not fully implemented for: {sql}")
 
 def insert(table, data):
-    cols = ', '.join(f'"{k}"' for k in data.keys())
-    placeholders = ', '.join(['%s'] * len(data))
-    values = [_prep_value(v) for v in data.values()]
-    sql = f'INSERT INTO "{table}" ({cols}) VALUES ({placeholders})'
-    execute(sql, values)
-
+    client = get_client()
+    return client.table(table).insert(data).execute().data
 
 def insert_many(table, rows):
     if not rows:
-        return
-    cols = ', '.join(f'"{k}"' for k in rows[0].keys())
-    placeholders = ', '.join(['%s'] * len(rows[0]))
-    sql = f'INSERT INTO "{table}" ({cols}) VALUES ({placeholders})'
-    pool = get_pool()
-    conn = pool.getconn()
-    try:
-        with conn.cursor() as cur:
-            for row in rows:
-                values = [_prep_value(v) for v in row.values()]
-                cur.execute(sql, values)
-            conn.commit()
-    except Exception as e:
-        conn.rollback()
-        raise e
-    finally:
-        pool.putconn(conn)
-
+        return []
+    client = get_client()
+    return client.table(table).insert(rows).execute().data
 
 def update(table, data, where_col, where_val):
-    set_parts = ', '.join(f'"{k}" = %s' for k in data.keys())
-    values = [_prep_value(v) for v in data.values()]
-    values.append(where_val)
-    sql = f'UPDATE "{table}" SET {set_parts} WHERE "{where_col}" = %s RETURNING *'
-    return execute_returning(sql, values)
-
+    client = get_client()
+    return client.table(table).update(data).eq(where_col, where_val).execute().data
 
 def delete(table, where_col, where_val):
-    sql = f'DELETE FROM "{table}" WHERE "{where_col}" = %s RETURNING *'
-    return execute_returning(sql, [where_val])
+    client = get_client()
+    return client.table(table).delete().eq(where_col, where_val).execute().data

@@ -364,7 +364,14 @@ def main():
     print("🚀 Starting Alpha Groups API Tests - Enhanced Version")
     print("=" * 60)
     
-    tester = AlphaGroupsAPITester()
+    base_url = "http://localhost:8000"
+    if "--production" in sys.argv:
+        base_url = "https://api.emergentalpha.vercel.app"
+        print(f"🌍 Testing PRODUCTION backend: {base_url}")
+    else:
+        print(f"💻 Testing LOCAL backend: {base_url}")
+        
+    tester = AlphaGroupsAPITester(base_url=base_url)
     
     # Test public endpoints
     print("\n📋 Testing Public Endpoints")
