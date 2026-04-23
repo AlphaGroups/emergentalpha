@@ -61,17 +61,107 @@ function App() {
             <ScrollToTop />
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<><Navbar /><HomePage /><Footer /></>} />
-              <Route path="/packages" element={<><Navbar /><PackagesPage /><Footer /></>} />
-              <Route path="/services" element={<><Navbar /><ServicesPage /><Footer /></>} />
-              <Route path="/calculator" element={<><Navbar /><CalculatorPage /><Footer /></>} />
-              <Route path="/contact" element={<><Navbar /><ContactPage /><Footer /></>} />
-              <Route path="/collaboration" element={<><Navbar /><CollaborationPage /><Footer /></>} />
-              <Route path="/sales" element={<><Navbar /><SalesPage /><Footer /></>} />
-              <Route path="/sales/:id" element={<><Navbar /><ListingDetailPage /><Footer /></>} />
-              <Route path="/vendor-registration" element={<><Navbar /><VendorRegistrationPage /><Footer /></>} />
-              <Route path="/referral-terms" element={<><Navbar /><ReferralTermsPage /><Footer /></>} />
-              
+              <Route
+                path="/"
+                element={
+                  <>
+                    <Navbar />
+                    <HomePage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/packages"
+                element={
+                  <>
+                    <Navbar />
+                    <PackagesPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/services"
+                element={
+                  <>
+                    <Navbar />
+                    <ServicesPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/calculator"
+                element={
+                  <>
+                    <Navbar />
+                    <CalculatorPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/contact"
+                element={
+                  <>
+                    <Navbar />
+                    <ContactPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/collaboration"
+                element={
+                  <>
+                    <Navbar />
+                    <CollaborationPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/sales"
+                element={
+                  <>
+                    <Navbar />
+                    <SalesPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/sales/:id"
+                element={
+                  <>
+                    <Navbar />
+                    <ListingDetailPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/vendor-registration"
+                element={
+                  <>
+                    <Navbar />
+                    <VendorRegistrationPage />
+                    <Footer />
+                  </>
+                }
+              />
+              <Route
+                path="/referral-terms"
+                element={
+                  <>
+                    <Navbar />
+                    <ReferralTermsPage />
+                    <Footer />
+                  </>
+                }
+              />
+
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<AdminLayout />}>

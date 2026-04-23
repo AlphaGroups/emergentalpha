@@ -23,7 +23,12 @@ const CalculatorPage = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [packageConfigs, setPackageConfigs] = useState([]);
+  const packageConfigs = useMemo(() => [
+    { name: 'classic', price_per_sft: 1899 },
+    { name: 'select', price_per_sft: 2199 },
+    { name: 'signature', price_per_sft: 2599 },
+    { name: 'customize', price_per_sft: 0 }
+  ], []);
 
   const [formData, setFormData] = useState({
     plotArea: searchParams.get('area') || '',
@@ -36,17 +41,7 @@ const CalculatorPage = () => {
     message: ''
   });
 
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        const res = await axios.get(`${API}/packages`);
-        setPackageConfigs(res.data.configs || []);
-      } catch (e) {
-        console.error('Failed to fetch packages');
-      }
-    };
-    fetchPackages();
-  }, []);
+  // Local package data used instead of fetching from API
 
   const projectTypes = [
     { value: 'independent_house', label: 'Independent House' },
@@ -119,7 +114,9 @@ const CalculatorPage = () => {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/quote-request`, {
+      // Mock submission for client-side only calculator
+      await new Promise(resolve => setTimeout(resolve, 800));
+      console.log('Quote requested:', {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,

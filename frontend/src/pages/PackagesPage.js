@@ -1,9 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Check, ArrowRight, Info } from 'lucide-react';
-import { API } from '@/config/constants';
-import axios from 'axios';
+"use client";
+
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Check, ArrowRight, Info } from "lucide-react";
+import { API } from "@/config/constants";
+import axios from "axios";
 
 const PackagesPage = () => {
   const [packages, setPackages] = useState({ configs: [], features: [] });
@@ -15,7 +17,7 @@ const PackagesPage = () => {
         const response = await axios.get(`${API}/packages`);
         setPackages(response.data);
       } catch (error) {
-        console.error('Failed to fetch packages:', error);
+        console.error("Failed to fetch packages:", error);
       } finally {
         setLoading(false);
       }
@@ -32,9 +34,9 @@ const PackagesPage = () => {
   }
 
   const { configs, features } = packages;
-  const packageNames = ['classic', 'select', 'signature', 'customize'];
+  const packageNames = ["classic", "select", "signature", "customize"];
 
-  const getPackageConfig = (name) => configs.find(c => c.name === name) || {};
+  const getPackageConfig = (name) => configs.find((c) => c.name === name) || {};
 
   return (
     <div data-testid="packages-page" className="min-h-screen">
@@ -45,8 +47,9 @@ const PackagesPage = () => {
             Construction Packages
           </h1>
           <p className="text-slate-300 text-lg max-w-3xl mx-auto">
-            Choose from 4 carefully curated packages designed to match your budget and aspirations. 
-            Transparent pricing with detailed material specifications.
+            Choose from 4 carefully curated packages designed to match your
+            budget and aspirations. Transparent pricing with detailed material
+            specifications.
           </p>
         </div>
       </section>
@@ -57,14 +60,16 @@ const PackagesPage = () => {
           <div className="grid md:grid-cols-4 gap-6">
             {packageNames.map((pkgName, idx) => {
               const config = getPackageConfig(pkgName);
-              const isPopular = pkgName === 'select';
-              
+              const isPopular = pkgName === "select";
+
               return (
                 <div
                   key={pkgName}
                   data-testid={`package-card-${pkgName}`}
                   className={`relative bg-white border-2 p-6 rounded-sm transition-all hover:shadow-xl ${
-                    isPopular ? 'border-[#F97316] scale-105' : 'border-slate-200 hover:border-[#2a4599]'
+                    isPopular
+                      ? "border-[#F97316] scale-105"
+                      : "border-slate-200 hover:border-[#2a4599]"
                   }`}
                 >
                   {isPopular && (
@@ -72,31 +77,39 @@ const PackagesPage = () => {
                       Most Popular
                     </div>
                   )}
-                  
+
                   <div className="text-center">
-                    <h3 className="text-2xl font-bold text-[#010822] capitalize mb-2">{pkgName}</h3>
-                    <p className="text-slate-500 text-sm mb-4">{config.description}</p>
-                    
+                    <h3 className="text-2xl font-bold text-[#010822] capitalize mb-2">
+                      {pkgName}
+                    </h3>
+                    <p className="text-slate-500 text-sm mb-4">
+                      {config.description}
+                    </p>
+
                     <div className="mb-6">
-                      {pkgName === 'customize' ? (
-                        <div className="text-2xl font-bold text-[#2a4599]">Custom Quote</div>
+                      {pkgName === "customize" ? (
+                        <div className="text-2xl font-bold text-[#2a4599]">
+                          Custom Quote
+                        </div>
                       ) : (
                         <>
                           <div className="text-3xl font-bold text-[#2a4599]">
                             ₹{config.price_per_sft?.toLocaleString()}
                           </div>
-                          <div className="text-slate-500 text-sm">per sq.ft</div>
+                          <div className="text-slate-500 text-sm">
+                            per sq.ft
+                          </div>
                         </>
                       )}
                     </div>
-                    
+
                     <Link to={`/calculator?package=${pkgName}`}>
                       <Button
                         data-testid={`select-${pkgName}`}
                         className={`w-full py-3 font-bold rounded-sm ${
                           isPopular
-                            ? 'bg-[#F97316] hover:bg-[#ea580c] text-white'
-                            : 'bg-[#2a4599] hover:bg-[#1e3a8a] text-white'
+                            ? "bg-[#F97316] hover:bg-[#ea580c] text-white"
+                            : "bg-[#2a4599] hover:bg-[#1e3a8a] text-white"
                         }`}
                       >
                         Get Estimate
@@ -129,16 +142,17 @@ const PackagesPage = () => {
                 Specifications
               </div>
               {packageNames.map((name) => (
-                <div 
+                <div
                   key={name}
                   className={`p-4 text-center font-bold text-sm capitalize ${
-                    name === 'select' ? 'bg-[#F97316]' : ''
+                    name === "select" ? "bg-[#F97316]" : ""
                   }`}
                 >
                   {name}
-                  {name !== 'customize' && (
+                  {name !== "customize" && (
                     <div className="text-xs font-normal mt-1 opacity-80">
-                      ₹{getPackageConfig(name).price_per_sft?.toLocaleString()}/sft
+                      ₹{getPackageConfig(name).price_per_sft?.toLocaleString()}
+                      /sft
                     </div>
                   )}
                 </div>
@@ -147,9 +161,9 @@ const PackagesPage = () => {
 
             {/* Table Body */}
             {features.map((feature, idx) => (
-              <div 
+              <div
                 key={feature.id}
-                className={`grid grid-cols-5 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50/50 transition-colors`}
+                className={`grid grid-cols-5 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-blue-50/50 transition-colors`}
               >
                 <div className="p-4 font-medium text-[#010822] border-r border-slate-100 text-sm">
                   {feature.name}
@@ -178,24 +192,26 @@ const PackagesPage = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                title: 'Fixed Price Guarantee',
-                desc: 'No hidden costs. The price we quote is the price you pay.'
+                title: "Fixed Price Guarantee",
+                desc: "No hidden costs. The price we quote is the price you pay.",
               },
               {
-                title: 'Quality Materials',
-                desc: 'All packages use ISI-certified, branded materials only.'
+                title: "Quality Materials",
+                desc: "All packages use ISI-certified, branded materials only.",
               },
               {
-                title: 'Transparent Process',
-                desc: 'Track every stage of construction with real-time updates.'
-              }
+                title: "Transparent Process",
+                desc: "Track every stage of construction with real-time updates.",
+              },
             ].map((item, idx) => (
               <div key={idx} className="flex gap-4">
                 <div className="w-10 h-10 bg-[#2a4599]/10 rounded-full flex items-center justify-center flex-shrink-0">
                   <Check className="text-[#2a4599]" size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#010822] mb-2">{item.title}</h4>
+                  <h4 className="font-bold text-[#010822] mb-2">
+                    {item.title}
+                  </h4>
                   <p className="text-slate-600 text-sm">{item.desc}</p>
                 </div>
               </div>
@@ -215,7 +231,7 @@ const PackagesPage = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/calculator">
-              <Button 
+              <Button
                 data-testid="packages-calculator-cta"
                 className="bg-[#F97316] hover:bg-[#ea580c] text-white font-bold px-10 py-6 text-lg rounded-sm"
               >
@@ -224,7 +240,7 @@ const PackagesPage = () => {
               </Button>
             </Link>
             <Link to="/contact">
-              <Button 
+              <Button
                 variant="outline"
                 className="border-2 border-white text-white hover:bg-white hover:text-[#2a4599] font-bold px-10 py-6 text-lg rounded-sm"
               >
