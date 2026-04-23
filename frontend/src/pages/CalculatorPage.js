@@ -13,8 +13,6 @@ import {
 import { Calculator, ArrowRight, ArrowLeft, Check, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { calculateConstructionCost } from '@/lib/packageData';
-
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
