@@ -366,7 +366,7 @@ def main():
     
     base_url = "http://localhost:8000"
     if "--production" in sys.argv:
-        base_url = "https://api.emergentalpha.vercel.app"
+        base_url = "https://emergentalpha.onrender.com"
         print(f"🌍 Testing PRODUCTION backend: {base_url}")
     else:
         print(f"💻 Testing LOCAL backend: {base_url}")
