@@ -39,6 +39,8 @@ def _parse_select(sql, params):
             param_idx = 0
             for cond in conditions:
                 cond = cond.strip()
+                if cond == '1=1':
+                    continue
                 if 'IN (' in cond.upper():
                     # e.g. status IN ('contacted','in_progress')
                     col = cond.split('IN')[0].strip()
@@ -47,7 +49,7 @@ def _parse_select(sql, params):
                     req = req.in_(col, vals_list)
                 elif 'IS NOT NULL' in cond.upper():
                     col = cond.replace('IS NOT NULL', '').strip()
-                    req = req.not_is(col, "null")
+                    req = req.not_.is_(col, "null")
                 elif '!=' in cond:
                     col, val = [x.strip() for x in cond.split('!=')]
                     if val == "''":
@@ -94,9 +96,12 @@ def _parse_select(sql, params):
         else:
             param_idx = 0
             for cond in conditions:
+                cond = cond.strip()
+                if cond == '1=1':
+                    continue
                 if 'IS NOT NULL' in cond.upper():
                     col = cond.replace('IS NOT NULL', '').strip()
-                    req = req.not_is(col, "null")
+                    req = req.not_.is_(col, "null")
                 elif '=' in cond:
                     col, val = [x.strip() for x in cond.split('=')]
                     if val == '%s':
