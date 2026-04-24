@@ -28,11 +28,17 @@ def main():
         ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending',
         ADD COLUMN IF NOT EXISTS vendor_id TEXT,
         ADD COLUMN IF NOT EXISTS document_url TEXT;
+
+        ALTER TABLE public.leads
+        ADD COLUMN IF NOT EXISTS referral_code TEXT,
+        ADD COLUMN IF NOT EXISTS partner_id TEXT,
+        ADD COLUMN IF NOT EXISTS deal_value DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS referral_earning DOUBLE PRECISION;
         
         NOTIFY pgrst, 'reload schema';
         """
         cur.execute(sql)
-        print("✅ Successfully updated the vendors table schema!")
+        print("✅ Successfully updated the vendors and leads table schemas!")
         print("✅ Successfully triggered API schema cache reload!")
         print("\nYou can now submit your vendor form from the live website!")
         

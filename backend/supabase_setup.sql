@@ -17,6 +17,10 @@ create table if not exists public.leads (
   message text,
   source text default 'website',
   status text default 'new',
+  referral_code text,
+  partner_id text,
+  deal_value double precision,
+  referral_earning double precision,
   notes text,
   created_at timestamptz default now()
 );
